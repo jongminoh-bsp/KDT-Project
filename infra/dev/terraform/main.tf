@@ -55,6 +55,9 @@ module "ec2" {
 
   mgmt_sg_ids = [module.sg.mgmt_sg_id]
   q_dev_sg_ids = [module.sg.qdev_sg_id]
+  
+  name_prefix = local.name_prefix
+  common_tags = local.common_tags
 }
 
 #################################################
