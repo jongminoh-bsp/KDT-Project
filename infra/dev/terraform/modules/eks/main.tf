@@ -37,7 +37,7 @@ module "eks_cluster" {
   cluster_enabled_log_types = ["api", "audit", "authenticator"]
 
   eks_managed_node_groups = {
-    "${var.cluster_name}-node" = {
+    "main" = {
       instance_types = var.node_instance_types
       desired_size   = var.node_desired_size
       min_size       = var.node_min_size
