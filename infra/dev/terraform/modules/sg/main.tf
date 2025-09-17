@@ -22,6 +22,7 @@ resource "aws_security_group" "ng" {
   description = "EKS NodeGroup SG"
   vpc_id      = var.vpc_id
 
+  # Allow communication within the node group
   ingress {
     from_port = 0
     to_port   = 65535
@@ -29,12 +30,22 @@ resource "aws_security_group" "ng" {
     self      = true
   }
 
+  # Allow EKS Control Plane to communicate with nodes
   ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow EKS Control Plane to Node"
+    from_port       = 1025
+    to_port         = 65535
+    protocol        = "tcp"
+    security_groups = [aws_security_group.cluster.id]
+    description     = "Allow EKS Control Plane to Node"
+  }
+
+  # Allow HTTPS from control plane
+  ingress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.cluster.id]
+    description     = "Allow HTTPS from control plane"
   }
 
   egress {
