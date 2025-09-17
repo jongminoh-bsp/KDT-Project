@@ -183,6 +183,16 @@ def main():
     print(f"💾 Writing variables: {output_file}")
     write_terraform_vars(tf_vars, output_file)
     
+    # Format the generated file
+    try:
+        import subprocess
+        result = subprocess.run(['terraform', 'fmt', output_file], 
+                              capture_output=True, text=True, cwd=os.path.dirname(output_file))
+        if result.returncode == 0:
+            print("🎨 Formatted with terraform fmt")
+    except Exception as e:
+        print(f"⚠️ Could not format file: {e}")
+    
     print("=" * 60)
     print("✅ Generation completed successfully!")
     print(f"📁 Generated {len(tf_vars)} variables")
