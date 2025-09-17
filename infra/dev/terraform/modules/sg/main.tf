@@ -15,6 +15,14 @@ resource "aws_security_group" "mgmt" {
     Name    = "${var.name_prefix}-management-sg"
     Purpose = "management"
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  timeouts {
+    delete = "5m"
+  }
 }
 
 # EKS NodeGroup Security Group
@@ -42,6 +50,14 @@ resource "aws_security_group" "ng" {
     Name    = "${var.name_prefix}-nodegroup-sg"
     Purpose = "eks-nodegroup"
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  timeouts {
+    delete = "5m"
+  }
 }
 
 # EKS Cluster Security Group
@@ -61,6 +77,14 @@ resource "aws_security_group" "cluster" {
     Name    = "${var.name_prefix}-cluster-sg"
     Purpose = "eks-cluster"
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  timeouts {
+    delete = "5m"
+  }
 }
 
 # Security Group Rules (separate resources to avoid circular dependency)
@@ -72,6 +96,11 @@ resource "aws_security_group_rule" "ng_from_cluster" {
   source_security_group_id = aws_security_group.cluster.id
   security_group_id        = aws_security_group.ng.id
   description              = "Allow EKS Control Plane to Node"
+
+  timeouts {
+    create = "5m"
+    delete = "5m"
+  }
 }
 
 resource "aws_security_group_rule" "ng_https_from_cluster" {
@@ -82,6 +111,11 @@ resource "aws_security_group_rule" "ng_https_from_cluster" {
   source_security_group_id = aws_security_group.cluster.id
   security_group_id        = aws_security_group.ng.id
   description              = "Allow HTTPS from control plane"
+
+  timeouts {
+    create = "5m"
+    delete = "5m"
+  }
 }
 
 resource "aws_security_group_rule" "cluster_from_ng" {
@@ -92,6 +126,11 @@ resource "aws_security_group_rule" "cluster_from_ng" {
   source_security_group_id = aws_security_group.ng.id
   security_group_id        = aws_security_group.cluster.id
   description              = "Allow HTTPS from NodeGroup"
+
+  timeouts {
+    create = "5m"
+    delete = "5m"
+  }
 }
 
 resource "aws_security_group_rule" "cluster_from_mgmt" {
@@ -102,6 +141,11 @@ resource "aws_security_group_rule" "cluster_from_mgmt" {
   source_security_group_id = aws_security_group.mgmt.id
   security_group_id        = aws_security_group.cluster.id
   description              = "Allow HTTPS from Management"
+
+  timeouts {
+    create = "5m"
+    delete = "5m"
+  }
 }
 
 # RDS Security Group
@@ -129,6 +173,14 @@ resource "aws_security_group" "rds" {
     Name    = "${var.name_prefix}-database-sg"
     Purpose = "database"
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  timeouts {
+    delete = "5m"
+  }
 }
 
 # Q-Dev Security Group
@@ -149,4 +201,12 @@ resource "aws_security_group" "qdev" {
     Name    = "${var.name_prefix}-qdev-sg"
     Purpose = "development"
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  timeouts {
+    delete = "5m"
+  }
 }

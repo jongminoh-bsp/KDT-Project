@@ -23,6 +23,7 @@ AWS 리소스 관리, 인프라 구축/정리, 비용 최적화 등
 | 002 | Security | [보안 그룹 순환 참조 핫픽스](./security/002-security-group-circular-reference-hotfix.md) | 2025-09-17 | Critical | ✅ 완료 |
 | 003 | Feature | [네이밍 컨벤션 통일](./feature/003-naming-convention-standardization.md) | 2025-09-17 | Medium | ✅ 완료 |
 | 004 | Infrastructure | [인프라 리소스 정리](./infrastructure/004-infrastructure-cleanup.md) | 2025-09-17 | High | ✅ 완료 |
+| 005 | Infrastructure | [보안 그룹 삭제 최적화](./infrastructure/005-security-group-deletion-optimization.md) | 2025-09-17 | Medium | ✅ 완료 |
 
 ## 📋 카테고리별 요약
 
@@ -38,9 +39,10 @@ AWS 리소스 관리, 인프라 구축/정리, 비용 최적화 등
 - 표준 네이밍 컨벤션 적용
 - 공통 태깅 전략 구현
 
-### 🏗️ Infrastructure (1개)
+### 🏗️ Infrastructure (2개)
 - 57개 AWS 리소스 정리
 - 월 $128 비용 절약
+- 보안 그룹 삭제 최적화 (80% 성능 향상)
 
 ## 📋 리포트 작성 가이드
 
