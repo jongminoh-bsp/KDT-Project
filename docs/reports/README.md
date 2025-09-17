@@ -8,6 +8,7 @@
 | 001 | [보안 개선](./001-security-improvements.md) | 2025-09-17 | Critical | ✅ 완료 | `feature/security-improvements` |
 | 002 | [보안 그룹 순환 참조 핫픽스](./002-security-group-circular-reference-hotfix.md) | 2025-09-17 | Critical | ✅ 완료 | `hotfix/security-group-circular-reference` |
 | 003 | [네이밍 컨벤션 통일](./003-naming-convention-standardization.md) | 2025-09-17 | Medium | ✅ 완료 | `feature/naming-convention-standardization` |
+| 004 | [인프라 리소스 정리](./004-infrastructure-cleanup.md) | 2025-09-17 | High | ✅ 완료 | `feature/infrastructure-cleanup` |
 
 ## 📋 리포트 작성 가이드
 
