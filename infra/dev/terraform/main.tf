@@ -30,7 +30,6 @@ module "rds" {
   sg_ids     = [module.sg.rds_sg_id]
 
   db_username = var.db_username
-  db_password = var.db_password
   db_name     = var.db_name
 }
 

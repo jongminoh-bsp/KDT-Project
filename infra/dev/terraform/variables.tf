@@ -55,12 +55,6 @@ variable "db_username" {
   type        = string
 }
 
-variable "db_password" {
-  description = "The master password for RDS"
-  type        = string
-  sensitive   = true
-}
-
 variable "db_name" {
   description = "Initial database name"
   type        = string
