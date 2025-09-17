@@ -30,24 +30,6 @@ resource "aws_security_group" "ng" {
     self      = true
   }
 
-  # Allow EKS Control Plane to communicate with nodes
-  ingress {
-    from_port       = 1025
-    to_port         = 65535
-    protocol        = "tcp"
-    security_groups = [aws_security_group.cluster.id]
-    description     = "Allow EKS Control Plane to Node"
-  }
-
-  # Allow HTTPS from control plane
-  ingress {
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.cluster.id]
-    description     = "Allow HTTPS from control plane"
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -66,20 +48,6 @@ resource "aws_security_group" "cluster" {
   description = "EKS cluster SG"
   vpc_id      = var.vpc_id
 
-  ingress {
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ng.id]
-  }
-
-  ingress {
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.mgmt.id]
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -90,6 +58,47 @@ resource "aws_security_group" "cluster" {
   tags = {
     Name = "cluster-sg"
   }
+}
+
+# Security Group Rules (separate resources to avoid circular dependency)
+resource "aws_security_group_rule" "ng_from_cluster" {
+  type                     = "ingress"
+  from_port                = 1025
+  to_port                  = 65535
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.cluster.id
+  security_group_id        = aws_security_group.ng.id
+  description              = "Allow EKS Control Plane to Node"
+}
+
+resource "aws_security_group_rule" "ng_https_from_cluster" {
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.cluster.id
+  security_group_id        = aws_security_group.ng.id
+  description              = "Allow HTTPS from control plane"
+}
+
+resource "aws_security_group_rule" "cluster_from_ng" {
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.ng.id
+  security_group_id        = aws_security_group.cluster.id
+  description              = "Allow HTTPS from NodeGroup"
+}
+
+resource "aws_security_group_rule" "cluster_from_mgmt" {
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.mgmt.id
+  security_group_id        = aws_security_group.cluster.id
+  description              = "Allow HTTPS from Management"
 }
 
 # RDS SG
@@ -134,4 +143,3 @@ resource "aws_security_group" "qdev" {
     Name = "q-dev-sg"
   }
 }
-
