@@ -1,7 +1,7 @@
-# Management SG
+# Management Security Group
 resource "aws_security_group" "mgmt" {
-  name        = "mgmt-sg"
-  description = "Mgmt SSH from Bastion"
+  name        = "${var.name_prefix}-management-sg"
+  description = "Security group for management instances"
   vpc_id      = var.vpc_id
 
   egress {
@@ -11,15 +11,16 @@ resource "aws_security_group" "mgmt" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "mgmt-sg"
-  }
+  tags = merge(var.common_tags, {
+    Name    = "${var.name_prefix}-management-sg"
+    Purpose = "management"
+  })
 }
 
-# NodeGroup SG
+# EKS NodeGroup Security Group
 resource "aws_security_group" "ng" {
-  name        = "ng-sg"
-  description = "EKS NodeGroup SG"
+  name        = "${var.name_prefix}-nodegroup-sg"
+  description = "Security group for EKS node group"
   vpc_id      = var.vpc_id
 
   # Allow communication within the node group
@@ -37,15 +38,16 @@ resource "aws_security_group" "ng" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "ng-sg"
-  }
+  tags = merge(var.common_tags, {
+    Name    = "${var.name_prefix}-nodegroup-sg"
+    Purpose = "eks-nodegroup"
+  })
 }
 
-# Cluster SG
+# EKS Cluster Security Group
 resource "aws_security_group" "cluster" {
-  name        = "cluster-sg"
-  description = "EKS cluster SG"
+  name        = "${var.name_prefix}-cluster-sg"
+  description = "Security group for EKS cluster"
   vpc_id      = var.vpc_id
 
   egress {
@@ -55,9 +57,10 @@ resource "aws_security_group" "cluster" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "cluster-sg"
-  }
+  tags = merge(var.common_tags, {
+    Name    = "${var.name_prefix}-cluster-sg"
+    Purpose = "eks-cluster"
+  })
 }
 
 # Security Group Rules (separate resources to avoid circular dependency)
@@ -101,10 +104,10 @@ resource "aws_security_group_rule" "cluster_from_mgmt" {
   description              = "Allow HTTPS from Management"
 }
 
-# RDS SG
+# RDS Security Group
 resource "aws_security_group" "rds" {
-  name        = "rds-sg"
-  description = "Allow MySQL from NodeGroup"
+  name        = "${var.name_prefix}-database-sg"
+  description = "Security group for RDS database"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -112,6 +115,7 @@ resource "aws_security_group" "rds" {
     to_port         = 3306
     protocol        = "tcp"
     security_groups = [aws_security_group.ng.id]
+    description     = "Allow MySQL from NodeGroup"
   }
 
   egress {
@@ -121,15 +125,16 @@ resource "aws_security_group" "rds" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "rds-sg"
-  }
+  tags = merge(var.common_tags, {
+    Name    = "${var.name_prefix}-database-sg"
+    Purpose = "database"
+  })
 }
 
-# Q-Dev SG
+# Q-Dev Security Group
 resource "aws_security_group" "qdev" {
-  name        = "q-dev-sg"
-  description = "Security group for Q Developer EC2 (SSM access)"
+  name        = "${var.name_prefix}-qdev-sg"
+  description = "Security group for Q Developer instances"
   vpc_id      = var.vpc_id
 
   egress {
@@ -137,9 +142,11 @@ resource "aws_security_group" "qdev" {
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTPS for SSM access"
   }
 
-  tags = {
-    Name = "q-dev-sg"
-  }
+  tags = merge(var.common_tags, {
+    Name    = "${var.name_prefix}-qdev-sg"
+    Purpose = "development"
+  })
 }

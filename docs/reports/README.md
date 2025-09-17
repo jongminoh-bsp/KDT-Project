@@ -7,6 +7,7 @@
 | 000 | [브랜치 전략 수립](./000-branch-strategy-setup.md) | 2025-09-17 | High | ✅ 완료 | `main`, `develop`, `staging` |
 | 001 | [보안 개선](./001-security-improvements.md) | 2025-09-17 | Critical | ✅ 완료 | `feature/security-improvements` |
 | 002 | [보안 그룹 순환 참조 핫픽스](./002-security-group-circular-reference-hotfix.md) | 2025-09-17 | Critical | ✅ 완료 | `hotfix/security-group-circular-reference` |
+| 003 | [네이밍 컨벤션 통일](./003-naming-convention-standardization.md) | 2025-09-17 | Medium | ✅ 완료 | `feature/naming-convention-standardization` |
 
 ## 📋 리포트 작성 가이드
 
