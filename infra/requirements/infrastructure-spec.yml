@@ -1,0 +1,249 @@
+# 🏗️ Infrastructure Requirements Specification
+# 이 파일을 수정하면 자동으로 인프라가 배포됩니다
+
+metadata:
+  name: "kdt-project-infrastructure"
+  version: "1.0.0"
+  environment: "dev"
+  owner: "kdt-team"
+  description: "KDT 프로젝트 개발 환경 인프라"
+
+# 🌐 네트워크 설정
+network:
+  vpc:
+    cidr: "10.30.0.0/16"
+    enable_dns_hostnames: true
+    enable_dns_support: true
+  
+  subnets:
+    public:
+      - cidr: "10.30.10.0/24"
+        az: "ap-northeast-2a"
+      - cidr: "10.30.20.0/24"
+        az: "ap-northeast-2c"
+    
+    private_mgmt:
+      - cidr: "10.30.11.0/24"
+        az: "ap-northeast-2a"
+      - cidr: "10.30.21.0/24"
+        az: "ap-northeast-2c"
+    
+    private_nodegroup:
+      - cidr: "10.30.12.0/23"
+        az: "ap-northeast-2a"
+      - cidr: "10.30.22.0/23"
+        az: "ap-northeast-2c"
+    
+    private_rds:
+      - cidr: "10.30.14.0/24"
+        az: "ap-northeast-2a"
+      - cidr: "10.30.24.0/24"
+        az: "ap-northeast-2c"
+    
+    private_qdev:
+      - cidr: "10.30.15.0/24"
+        az: "ap-northeast-2a"
+      - cidr: "10.30.25.0/24"
+        az: "ap-northeast-2c"
+
+# 🖥️ 컴퓨팅 리소스
+compute:
+  ec2:
+    management:
+      instance_type: "t3.medium"
+      ami: "ami-0d5bb3742db8fc264"  # Amazon Linux 2023
+      key_name: "ojm-key"
+      enable_ssm: true
+    
+    qdev:
+      instance_type: "t3.medium"
+      ami: "ami-0d5bb3742db8fc264"
+      key_name: "ojm-key"
+      enable_ssm: true
+
+# ☸️ Kubernetes 클러스터
+kubernetes:
+  eks:
+    cluster_name: "kdt-dev-eks-cluster"
+    version: "1.33"
+    endpoint_private_access: true
+    endpoint_public_access: true
+    
+    node_groups:
+      main:
+        instance_types: ["t3.medium"]
+        ami_type: "AL2023_x86_64_STANDARD"
+        capacity_type: "ON_DEMAND"
+        scaling:
+          desired_size: 2
+          min_size: 1
+          max_size: 3
+        disk_size: 20
+        
+    addons:
+      - name: "vpc-cni"
+        version: "latest"
+      - name: "coredns"
+        version: "latest"
+      - name: "kube-proxy"
+        version: "latest"
+
+# 🗄️ 데이터베이스
+database:
+  rds:
+    engine: "mysql"
+    engine_version: "8.0.41"
+    instance_class: "db.t3.micro"
+    allocated_storage: 20
+    storage_type: "gp2"
+    storage_encrypted: true
+    
+    database_name: "skyline"
+    username: "ojm"
+    # password는 AWS Secrets Manager에서 자동 생성
+    
+    backup:
+      retention_period: 7
+      window: "03:00-04:00"
+    
+    maintenance:
+      window: "sun:04:00-sun:05:00"
+    
+    multi_az: false
+    publicly_accessible: false
+
+# 🔒 보안 설정
+security:
+  security_groups:
+    management:
+      description: "Security group for management instances"
+      rules:
+        egress:
+          - protocol: "-1"
+            from_port: 0
+            to_port: 0
+            cidr_blocks: ["0.0.0.0/0"]
+    
+    nodegroup:
+      description: "Security group for EKS node group"
+      rules:
+        ingress:
+          - protocol: "tcp"
+            from_port: 0
+            to_port: 65535
+            self: true
+        egress:
+          - protocol: "-1"
+            from_port: 0
+            to_port: 0
+            cidr_blocks: ["0.0.0.0/0"]
+    
+    cluster:
+      description: "Security group for EKS cluster"
+      rules:
+        egress:
+          - protocol: "-1"
+            from_port: 0
+            to_port: 0
+            cidr_blocks: ["0.0.0.0/0"]
+    
+    database:
+      description: "Security group for RDS database"
+      rules:
+        ingress:
+          - protocol: "tcp"
+            from_port: 3306
+            to_port: 3306
+            source_security_group: "nodegroup"
+        egress:
+          - protocol: "-1"
+            from_port: 0
+            to_port: 0
+            cidr_blocks: ["0.0.0.0/0"]
+    
+    qdev:
+      description: "Security group for Q Developer instances"
+      rules:
+        egress:
+          - protocol: "tcp"
+            from_port: 443
+            to_port: 443
+            cidr_blocks: ["0.0.0.0/0"]
+            description: "Allow HTTPS for SSM access"
+
+# 🏷️ 태깅 전략
+tags:
+  common:
+    Project: "kdt"
+    Environment: "dev"
+    ManagedBy: "terraform"
+    Owner: "kdt-team"
+    
+  cost_allocation:
+    CostCenter: "development"
+    Team: "kdt-team"
+
+# 💰 비용 최적화
+cost_optimization:
+  auto_scaling:
+    enabled: true
+    scale_down_delay: "10m"
+    scale_up_delay: "3m"
+  
+  spot_instances:
+    enabled: false  # 개발 환경에서는 안정성 우선
+    
+  scheduled_actions:
+    - name: "scale-down-evening"
+      schedule: "0 18 * * MON-FRI"  # 평일 오후 6시
+      min_size: 0
+      max_size: 1
+      desired_capacity: 0
+    
+    - name: "scale-up-morning"
+      schedule: "0 9 * * MON-FRI"   # 평일 오전 9시
+      min_size: 1
+      max_size: 3
+      desired_capacity: 2
+
+# 📊 모니터링 및 로깅
+monitoring:
+  cloudwatch:
+    log_retention_days: 90
+    enable_container_insights: true
+    
+  metrics:
+    - namespace: "AWS/EKS"
+      metrics: ["cluster_failed_request_count", "cluster_request_total"]
+    - namespace: "AWS/EC2"
+      metrics: ["CPUUtilization", "NetworkIn", "NetworkOut"]
+    - namespace: "AWS/RDS"
+      metrics: ["CPUUtilization", "DatabaseConnections"]
+
+# 🚀 배포 설정
+deployment:
+  strategy: "rolling_update"
+  
+  environments:
+    dev:
+      auto_apply: true
+      require_approval: false
+    
+    staging:
+      auto_apply: false
+      require_approval: true
+      approvers: ["kdt-team"]
+    
+    prod:
+      auto_apply: false
+      require_approval: true
+      approvers: ["kdt-team", "ops-team"]
+      
+  notifications:
+    slack:
+      enabled: false
+      webhook_url: ""
+    
+    email:
+      enabled: false
+      recipients: []
