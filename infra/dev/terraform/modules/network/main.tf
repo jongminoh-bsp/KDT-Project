@@ -31,10 +31,10 @@ resource "aws_subnet" "private_mgmt" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${var.name_prefix}-private-mgmt-subnet-${count.index + 1}"
-    Type = "private"
+    Name    = "${var.name_prefix}-private-mgmt-subnet-${count.index + 1}"
+    Type    = "private"
     Purpose = "management"
-    AZ   = var.azs[count.index]
+    AZ      = var.azs[count.index]
   })
 }
 
@@ -46,10 +46,10 @@ resource "aws_subnet" "private_ng" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${var.name_prefix}-private-nodegroup-subnet-${count.index + 1}"
-    Type = "private"
+    Name    = "${var.name_prefix}-private-nodegroup-subnet-${count.index + 1}"
+    Type    = "private"
     Purpose = "nodegroup"
-    AZ   = var.azs[count.index]
+    AZ      = var.azs[count.index]
   })
 }
 
@@ -61,10 +61,10 @@ resource "aws_subnet" "private_rds" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${var.name_prefix}-private-rds-subnet-${count.index + 1}"
-    Type = "private"
+    Name    = "${var.name_prefix}-private-rds-subnet-${count.index + 1}"
+    Type    = "private"
     Purpose = "database"
-    AZ   = var.azs[count.index]
+    AZ      = var.azs[count.index]
   })
 }
 
@@ -76,10 +76,10 @@ resource "aws_subnet" "private_qdev" {
   availability_zone = var.azs[count.index]
 
   tags = merge(var.common_tags, {
-    Name = "${var.name_prefix}-private-qdev-subnet-${count.index + 1}"
-    Type = "private"
+    Name    = "${var.name_prefix}-private-qdev-subnet-${count.index + 1}"
+    Type    = "private"
     Purpose = "development"
-    AZ   = var.azs[count.index]
+    AZ      = var.azs[count.index]
   })
 }
 
@@ -142,8 +142,8 @@ resource "aws_route_table" "private_mgmt" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "${var.name_prefix}-private-mgmt-route-table"
-    Type = "private"
+    Name    = "${var.name_prefix}-private-mgmt-route-table"
+    Type    = "private"
     Purpose = "management"
   })
 }
@@ -164,8 +164,8 @@ resource "aws_route_table" "private_ng" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "${var.name_prefix}-private-nodegroup-route-table"
-    Type = "private"
+    Name    = "${var.name_prefix}-private-nodegroup-route-table"
+    Type    = "private"
     Purpose = "nodegroup"
   })
 }
@@ -181,8 +181,8 @@ resource "aws_route_table" "private_rds" {
   vpc_id = aws_vpc.this.id
 
   tags = merge(var.common_tags, {
-    Name = "${var.name_prefix}-private-rds-route-table"
-    Type = "private"
+    Name    = "${var.name_prefix}-private-rds-route-table"
+    Type    = "private"
     Purpose = "database"
   })
 }
@@ -203,8 +203,8 @@ resource "aws_route_table" "private_qdev" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "${var.name_prefix}-private-qdev-route-table"
-    Type = "private"
+    Name    = "${var.name_prefix}-private-qdev-route-table"
+    Type    = "private"
     Purpose = "development"
   })
 }

@@ -1,10 +1,10 @@
 variable "subnet_ids" {
-  type = list(string)
+  type        = list(string)
   description = "Private RDS subnet IDs"
 }
 
 variable "sg_ids" {
-  type = list(string)
+  type        = list(string)
   description = "RDS Security Group IDs"
 }
 
@@ -54,5 +54,16 @@ variable "publicly_accessible" {
 variable "multi_az" {
   type    = bool
   default = false
+}
+
+variable "name_prefix" {
+  type        = string
+  description = "Name prefix for resources"
+}
+
+variable "common_tags" {
+  type        = map(string)
+  description = "Common tags for all resources"
+  default     = {}
 }
 

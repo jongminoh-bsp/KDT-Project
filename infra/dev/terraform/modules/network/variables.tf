@@ -23,7 +23,7 @@ variable "private_qdev_subnet_cidrs" {
 }
 
 variable "azs" {
-  type = list(string)
+  type        = list(string)
   description = "Availability zones"
 }
 

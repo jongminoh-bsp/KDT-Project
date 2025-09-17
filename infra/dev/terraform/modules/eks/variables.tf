@@ -3,7 +3,7 @@ variable "cluster_name" {
 }
 
 variable "cluster_version" {
-  type = string
+  type    = string
   default = "1.28"
 }
 
@@ -34,7 +34,7 @@ variable "node_sg_id" {
 }
 
 variable "node_instance_types" {
-  type = list(string)
+  type    = list(string)
   default = ["t3.medium"]
 }
 
@@ -54,7 +54,7 @@ variable "node_max_size" {
 }
 
 variable "tags" {
-  type    = map(string)
+  type = map(string)
   default = {
     Environment = "dev"
     Terraform   = "true"

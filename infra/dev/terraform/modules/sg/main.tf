@@ -96,11 +96,6 @@ resource "aws_security_group_rule" "ng_from_cluster" {
   source_security_group_id = aws_security_group.cluster.id
   security_group_id        = aws_security_group.ng.id
   description              = "Allow EKS Control Plane to Node"
-
-  timeouts {
-    create = "5m"
-    delete = "5m"
-  }
 }
 
 resource "aws_security_group_rule" "ng_https_from_cluster" {
@@ -111,11 +106,6 @@ resource "aws_security_group_rule" "ng_https_from_cluster" {
   source_security_group_id = aws_security_group.cluster.id
   security_group_id        = aws_security_group.ng.id
   description              = "Allow HTTPS from control plane"
-
-  timeouts {
-    create = "5m"
-    delete = "5m"
-  }
 }
 
 resource "aws_security_group_rule" "cluster_from_ng" {
@@ -126,11 +116,6 @@ resource "aws_security_group_rule" "cluster_from_ng" {
   source_security_group_id = aws_security_group.ng.id
   security_group_id        = aws_security_group.cluster.id
   description              = "Allow HTTPS from NodeGroup"
-
-  timeouts {
-    create = "5m"
-    delete = "5m"
-  }
 }
 
 resource "aws_security_group_rule" "cluster_from_mgmt" {
@@ -141,11 +126,6 @@ resource "aws_security_group_rule" "cluster_from_mgmt" {
   source_security_group_id = aws_security_group.mgmt.id
   security_group_id        = aws_security_group.cluster.id
   description              = "Allow HTTPS from Management"
-
-  timeouts {
-    create = "5m"
-    delete = "5m"
-  }
 }
 
 # RDS Security Group

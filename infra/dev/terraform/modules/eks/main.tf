@@ -43,16 +43,16 @@ module "eks_cluster" {
       min_size       = var.node_min_size
       max_size       = var.node_max_size
       subnet_ids     = var.subnet_ids
-      
+
       # Node group specific settings
-      ami_type       = "AL2023_x86_64_STANDARD"
-      capacity_type  = "ON_DEMAND"
-      disk_size      = 20
-      
+      ami_type      = "AL2023_x86_64_STANDARD"
+      capacity_type = "ON_DEMAND"
+      disk_size     = 20
+
       # Enable IMDSv2
       metadata_options = {
-        http_endpoint = "enabled"
-        http_tokens   = "required"
+        http_endpoint               = "enabled"
+        http_tokens                 = "required"
         http_put_response_hop_limit = 2
       }
     }

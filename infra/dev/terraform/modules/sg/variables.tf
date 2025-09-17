@@ -1,5 +1,5 @@
 variable "vpc_id" {
-  type = string
+  type        = string
   description = "VPC ID to create security groups in"
 }
 
