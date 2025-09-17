@@ -237,6 +237,39 @@ jobs:
         echo "Environment: ${{ github.event.inputs.environment || 'dev' }}"
         echo "Action: ${{ github.event.inputs.action || 'apply' }}"
         echo "Triggered by: ${{ github.actor }}"
+        
+    - name: 📢 Slack Success Notification
+      if: env.SLACK_WEBHOOK_URL != ''
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        channel: '#infrastructure'
+        username: 'Terraform Bot'
+        icon_emoji: ':rocket:'
+        title: '🚀 Infrastructure Deployment Success'
+        text: |
+          *Environment:* ${{ github.event.inputs.environment || 'dev' }}
+          *Action:* ${{ github.event.inputs.action || 'apply' }}
+          *Triggered by:* ${{ github.actor }}
+          *Branch:* ${{ github.ref_name }}
+          *Commit:* ${{ github.sha }}
+          
+          ✅ All infrastructure changes have been applied successfully!
+        fields: |
+          [
+            {
+              "title": "Repository",
+              "value": "${{ github.repository }}",
+              "short": true
+            },
+            {
+              "title": "Workflow",
+              "value": "${{ github.workflow }}",
+              "short": true
+            }
+          ]
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   notify-failure:
     name: ❌ Notify Failure
@@ -248,6 +281,39 @@ jobs:
     - name: ❌ Failure Notification
       run: |
         echo "💥 Infrastructure deployment failed!"
+        
+    - name: 📢 Slack Failure Notification
+      if: env.SLACK_WEBHOOK_URL != ''
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        channel: '#infrastructure'
+        username: 'Terraform Bot'
+        icon_emoji: ':warning:'
+        title: '❌ Infrastructure Deployment Failed'
+        text: |
+          *Environment:* ${{ github.event.inputs.environment || 'dev' }}
+          *Action:* ${{ github.event.inputs.action || 'apply' }}
+          *Triggered by:* ${{ github.actor }}
+          *Branch:* ${{ github.ref_name }}
+          *Commit:* ${{ github.sha }}
+          
+          💥 Infrastructure deployment encountered errors. Please check the logs.
+        fields: |
+          [
+            {
+              "title": "Repository",
+              "value": "${{ github.repository }}",
+              "short": true
+            },
+            {
+              "title": "Workflow Run",
+              "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "short": true
+            }
+          ]
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         echo "Please check the workflow logs for details."
         echo "Environment: ${{ github.event.inputs.environment || 'dev' }}"
         echo "Triggered by: ${{ github.actor }}"
