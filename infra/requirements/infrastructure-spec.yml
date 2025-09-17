@@ -75,9 +75,9 @@ kubernetes:
         ami_type: "AL2023_x86_64_STANDARD"
         capacity_type: "ON_DEMAND"
         scaling:
-          desired_size: 2
+          desired_size: 3
           min_size: 1
-          max_size: 3
+          max_size: 4
         disk_size: 20
         
     addons:
