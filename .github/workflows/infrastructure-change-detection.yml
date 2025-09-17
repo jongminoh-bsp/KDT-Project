@@ -10,6 +10,11 @@ on:
     paths:
       - 'infra/requirements/infrastructure-spec.yml'
 
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
 jobs:
   detect-changes:
     name: 🔍 Detect Infrastructure Changes
