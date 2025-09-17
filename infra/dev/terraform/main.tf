@@ -79,9 +79,9 @@ module "eks" {
   node_sg_id    = module.sg.ng_sg_id
 
   node_instance_types = ["t3.medium"]
-  node_desired_size   = 1
+  node_desired_size   = 2
   node_min_size       = 1
-  node_max_size       = 2
+  node_max_size       = 3
 
   tags = local.common_tags
 }
