@@ -1,0 +1,19 @@
+# Copy this file to terraform.tfvars and fill in your values
+# DO NOT commit terraform.tfvars to version control
+
+region = "ap-northeast-2"
+
+key_name = "your-key-name"
+
+ami_id = "ami-xxxxxxxxxxxxxxxxx"
+
+mgmt_instance_type  = "t3.medium"
+q_dev_instance_type = "t3.medium"
+
+db_username = "your-db-username"
+# db_password is managed by AWS Secrets Manager - do not specify here
+db_name     = "your-database-name"
+
+cluster_name = "your-cluster-name"
+
+cluster_version = "1.33"

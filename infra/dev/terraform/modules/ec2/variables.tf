@@ -30,3 +30,14 @@ variable "q_dev_sg_ids" {
   type = list(string)
 }
 
+variable "name_prefix" {
+  type        = string
+  description = "Name prefix for resources"
+}
+
+variable "common_tags" {
+  type        = map(string)
+  description = "Common tags for all resources"
+  default     = {}
+}
+

@@ -10,7 +10,10 @@ module "network" {
   private_ng_subnet_cidrs   = var.private_ng_subnet_cidrs
   private_rds_subnet_cidrs  = var.private_rds_subnet_cidrs
   private_qdev_subnet_cidrs = var.private_qdev_subnet_cidrs
-  azs                        = local.azs
+  azs                       = local.azs
+  
+  name_prefix  = local.name_prefix
+  common_tags  = local.common_tags
 }
 
 #################################################
@@ -18,7 +21,10 @@ module "network" {
 #################################################
 module "sg" {
   source = "./modules/sg"
-  vpc_id = module.network.vpc_id
+  
+  vpc_id      = module.network.vpc_id
+  name_prefix = local.name_prefix
+  common_tags = local.common_tags
 }
 
 #################################################
@@ -30,7 +36,6 @@ module "rds" {
   sg_ids     = [module.sg.rds_sg_id]
 
   db_username = var.db_username
-  db_password = var.db_password
   db_name     = var.db_name
 }
 
@@ -50,6 +55,9 @@ module "ec2" {
 
   mgmt_sg_ids = [module.sg.mgmt_sg_id]
   q_dev_sg_ids = [module.sg.qdev_sg_id]
+  
+  name_prefix = local.name_prefix
+  common_tags = local.common_tags
 }
 
 #################################################

@@ -1,6 +1,6 @@
 # IAM Role for SSM
 resource "aws_iam_role" "ssm_role" {
-  name = "ssm-role"
+  name = "${var.name_prefix}-ssm-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -14,6 +14,8 @@ resource "aws_iam_role" "ssm_role" {
       }
     ]
   })
+
+  tags = var.common_tags
 }
 
 resource "aws_iam_role_policy_attachment" "ssm_attach" {
@@ -22,11 +24,13 @@ resource "aws_iam_role_policy_attachment" "ssm_attach" {
 }
 
 resource "aws_iam_instance_profile" "ssm_profile" {
-  name = "ssm-profile"
+  name = "${var.name_prefix}-ssm-profile"
   role = aws_iam_role.ssm_role.name
+
+  tags = var.common_tags
 }
 
-# Management EC2
+# Management EC2 Instance
 resource "aws_instance" "mgmt" {
   ami                         = var.ami_id
   instance_type               = var.mgmt_instance_type
@@ -36,12 +40,13 @@ resource "aws_instance" "mgmt" {
   key_name                    = var.key_name
   iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
 
-  tags = {
-    Name = "ojm-mgmt"
-  }
+  tags = merge(var.common_tags, {
+    Name    = "${var.name_prefix}-management-instance"
+    Purpose = "management"
+  })
 }
 
-# Q-Dev EC2
+# Q-Dev EC2 Instance
 resource "aws_instance" "q_dev" {
   ami                         = var.ami_id
   instance_type               = var.q_dev_instance_type
@@ -51,8 +56,8 @@ resource "aws_instance" "q_dev" {
   key_name                    = var.key_name
   iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
 
-  tags = {
-    Name = "ojm-q-dev"
-  }
+  tags = merge(var.common_tags, {
+    Name    = "${var.name_prefix}-qdev-instance"
+    Purpose = "development"
+  })
 }
-

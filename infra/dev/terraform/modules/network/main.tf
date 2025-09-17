@@ -3,9 +3,9 @@ resource "aws_vpc" "this" {
   enable_dns_support   = true
   enable_dns_hostnames = true
 
-  tags = {
-    Name = "ojm-vpc"
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-vpc"
+  })
 }
 
 # Public Subnets
@@ -16,84 +16,102 @@ resource "aws_subnet" "public" {
   availability_zone       = var.azs[count.index]
   map_public_ip_on_launch = true
 
-  tags = {
-    Name = "public-snt-${substr(var.azs[count.index], -1, 1)}"
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-public-subnet-${count.index + 1}"
+    Type = "public"
+    AZ   = var.azs[count.index]
+  })
 }
 
-# Private Subnets
+# Private Management Subnets
 resource "aws_subnet" "private_mgmt" {
   count             = length(var.private_mgmt_subnet_cidrs)
   vpc_id            = aws_vpc.this.id
   cidr_block        = var.private_mgmt_subnet_cidrs[count.index]
   availability_zone = var.azs[count.index]
 
-  tags = {
-    Name = "private-mgmt-snt-${substr(var.azs[count.index], -1, 1)}"
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-private-mgmt-subnet-${count.index + 1}"
+    Type = "private"
+    Purpose = "management"
+    AZ   = var.azs[count.index]
+  })
 }
 
+# Private NodeGroup Subnets
 resource "aws_subnet" "private_ng" {
   count             = length(var.private_ng_subnet_cidrs)
   vpc_id            = aws_vpc.this.id
   cidr_block        = var.private_ng_subnet_cidrs[count.index]
   availability_zone = var.azs[count.index]
 
-  tags = {
-    Name = "private-ng-snt-${substr(var.azs[count.index], -1, 1)}"
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-private-nodegroup-subnet-${count.index + 1}"
+    Type = "private"
+    Purpose = "nodegroup"
+    AZ   = var.azs[count.index]
+  })
 }
 
+# Private RDS Subnets
 resource "aws_subnet" "private_rds" {
   count             = length(var.private_rds_subnet_cidrs)
   vpc_id            = aws_vpc.this.id
   cidr_block        = var.private_rds_subnet_cidrs[count.index]
   availability_zone = var.azs[count.index]
 
-  tags = {
-    Name = "private-rds-snt-${substr(var.azs[count.index], -1, 1)}"
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-private-rds-subnet-${count.index + 1}"
+    Type = "private"
+    Purpose = "database"
+    AZ   = var.azs[count.index]
+  })
 }
 
+# Private Q-Dev Subnets
 resource "aws_subnet" "private_qdev" {
   count             = length(var.private_qdev_subnet_cidrs)
   vpc_id            = aws_vpc.this.id
   cidr_block        = var.private_qdev_subnet_cidrs[count.index]
   availability_zone = var.azs[count.index]
 
-  tags = {
-    Name = "private-qdev-snt"
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-private-qdev-subnet-${count.index + 1}"
+    Type = "private"
+    Purpose = "development"
+    AZ   = var.azs[count.index]
+  })
 }
 
 # Internet Gateway
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
 
-  tags = {
-    Name = "ojm-igw"
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-internet-gateway"
+  })
 }
 
-# NAT Gateway
+# NAT Gateway EIP
 resource "aws_eip" "nat" {
   domain = "vpc"
 
-  tags = {
-    Name = "ojm-nat-eip"
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-nat-eip"
+  })
 }
 
+# NAT Gateway
 resource "aws_nat_gateway" "this" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public[0].id
 
-  tags = {
-    Name = "ojm-nat-gw"
-  }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-nat-gateway"
+  })
 }
 
-# Route Tables
+# Public Route Table
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
 
@@ -102,7 +120,10 @@ resource "aws_route_table" "public" {
     gateway_id = aws_internet_gateway.this.id
   }
 
-  tags = { Name = "public-rtb" }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-public-route-table"
+    Type = "public"
+  })
 }
 
 resource "aws_route_table_association" "public" {
@@ -111,6 +132,7 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+# Private Management Route Table
 resource "aws_route_table" "private_mgmt" {
   vpc_id = aws_vpc.this.id
 
@@ -119,7 +141,11 @@ resource "aws_route_table" "private_mgmt" {
     nat_gateway_id = aws_nat_gateway.this.id
   }
 
-  tags = { Name = "private-mgmt-rtb" }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-private-mgmt-route-table"
+    Type = "private"
+    Purpose = "management"
+  })
 }
 
 resource "aws_route_table_association" "private_mgmt" {
@@ -128,6 +154,7 @@ resource "aws_route_table_association" "private_mgmt" {
   route_table_id = aws_route_table.private_mgmt.id
 }
 
+# Private NodeGroup Route Table
 resource "aws_route_table" "private_ng" {
   vpc_id = aws_vpc.this.id
 
@@ -136,7 +163,11 @@ resource "aws_route_table" "private_ng" {
     nat_gateway_id = aws_nat_gateway.this.id
   }
 
-  tags = { Name = "private-ng-rtb" }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-private-nodegroup-route-table"
+    Type = "private"
+    Purpose = "nodegroup"
+  })
 }
 
 resource "aws_route_table_association" "private_ng" {
@@ -145,10 +176,15 @@ resource "aws_route_table_association" "private_ng" {
   route_table_id = aws_route_table.private_ng.id
 }
 
+# Private RDS Route Table
 resource "aws_route_table" "private_rds" {
   vpc_id = aws_vpc.this.id
 
-  tags = { Name = "private-rds-rtb" }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-private-rds-route-table"
+    Type = "private"
+    Purpose = "database"
+  })
 }
 
 resource "aws_route_table_association" "private_rds" {
@@ -157,6 +193,7 @@ resource "aws_route_table_association" "private_rds" {
   route_table_id = aws_route_table.private_rds.id
 }
 
+# Private Q-Dev Route Table
 resource "aws_route_table" "private_qdev" {
   vpc_id = aws_vpc.this.id
 
@@ -165,7 +202,11 @@ resource "aws_route_table" "private_qdev" {
     nat_gateway_id = aws_nat_gateway.this.id
   }
 
-  tags = { Name = "private-qdev-rtb" }
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-private-qdev-route-table"
+    Type = "private"
+    Purpose = "development"
+  })
 }
 
 resource "aws_route_table_association" "private_qdev" {
@@ -173,4 +214,3 @@ resource "aws_route_table_association" "private_qdev" {
   subnet_id      = aws_subnet.private_qdev[count.index].id
   route_table_id = aws_route_table.private_qdev.id
 }
-

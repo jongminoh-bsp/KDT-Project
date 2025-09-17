@@ -3,6 +3,18 @@ variable "region" {
   type        = string
 }
 
+variable "project" {
+  description = "Project name"
+  type        = string
+  default     = "kdt"
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "dev"
+}
+
 variable "vpc_cidr" {
   description = "CIDR block for the VPC"
   type        = string
@@ -53,12 +65,6 @@ variable "q_dev_instance_type" {
 variable "db_username" {
   description = "The master username for RDS"
   type        = string
-}
-
-variable "db_password" {
-  description = "The master password for RDS"
-  type        = string
-  sensitive   = true
 }
 
 variable "db_name" {
