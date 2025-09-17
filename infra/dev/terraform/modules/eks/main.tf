@@ -17,16 +17,50 @@ module "eks_cluster" {
   create_cluster_security_group = false
   create_node_security_group    = false
 
+  # EKS Access Entries for additional users/roles
+  access_entries = {
+    cluster_creator = {
+      kubernetes_groups = []
+      principal_arn     = data.aws_caller_identity.current.arn
+      policy_associations = {
+        admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+  }
+
+  # Enable EKS Cluster access logging
+  cluster_enabled_log_types = ["api", "audit", "authenticator"]
+
   eks_managed_node_groups = {
-    ojm-node = {
+    "${var.cluster_name}-node" = {
       instance_types = var.node_instance_types
       desired_size   = var.node_desired_size
       min_size       = var.node_min_size
       max_size       = var.node_max_size
       subnet_ids     = var.subnet_ids
+      
+      # Node group specific settings
+      ami_type       = "AL2023_x86_64_STANDARD"
+      capacity_type  = "ON_DEMAND"
+      disk_size      = 20
+      
+      # Enable IMDSv2
+      metadata_options = {
+        http_endpoint = "enabled"
+        http_tokens   = "required"
+        http_put_response_hop_limit = 2
+      }
     }
   }
 
   tags = var.tags
 }
+
+# Data source to get current AWS caller identity
+data "aws_caller_identity" "current" {}
 

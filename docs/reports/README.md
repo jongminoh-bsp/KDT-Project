@@ -24,16 +24,18 @@ AWS 리소스 관리, 인프라 구축/정리, 비용 최적화 등
 | 003 | Feature | [네이밍 컨벤션 통일](./feature/003-naming-convention-standardization.md) | 2025-09-17 | Medium | ✅ 완료 |
 | 004 | Infrastructure | [인프라 리소스 정리](./infrastructure/004-infrastructure-cleanup.md) | 2025-09-17 | High | ✅ 완료 |
 | 005 | Infrastructure | [보안 그룹 삭제 최적화](./infrastructure/005-security-group-deletion-optimization.md) | 2025-09-17 | Medium | ✅ 완료 |
+| 006 | Security | [EKS 접근 권한 문제 해결](./security/006-eks-access-permission-fix.md) | 2025-09-17 | High | ✅ 완료 |
 
 ## 📋 카테고리별 요약
 
 ### 🔧 Process (1개)
 - 브랜치 전략 및 협업 워크플로우 구축
 
-### 🔒 Security (2개)
+### 🔒 Security (3개)
 - AWS Secrets Manager 통합
 - 보안 그룹 권한 최소화
 - 순환 참조 문제 해결
+- EKS 접근 권한 자동화
 
 ### ⚙️ Feature (1개)
 - 표준 네이밍 컨벤션 적용
