@@ -1,11 +1,6 @@
 name: 🚀 Terraform Infrastructure Deployment
 
 on:
-  push:
-    branches: [ main, develop ]
-    paths: 
-      - 'infra/**'
-      - '.github/workflows/terraform-deploy.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
