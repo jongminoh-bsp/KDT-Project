@@ -171,7 +171,7 @@ jobs:
                 "fields": [
                   {
                     "title": "📅 스캔 일시",
-                    "value": "${{ github.run_id }} - ${{ github.run_number }}",
+                    "value": "Run #${{ github.run_number }} (ID: ${{ github.run_id }})",
                     "short": true
                   },
                   {
