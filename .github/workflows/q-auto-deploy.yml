@@ -5,6 +5,7 @@ on:
     branches: [ develop ]
     paths:
       - 'infra/**'
+      - 'infra/requirements/**'
 
 env:
   AWS_REGION: 'ap-northeast-2'
@@ -53,6 +54,10 @@ jobs:
         echo "🔍 Q가 Terraform 코드를 분석 중..."
         
         # 변경사항 분석
+        if echo "${{ steps.changes.outputs.changed_files }}" | grep -q "infrastructure-spec.yml"; then
+          echo "✅ 인프라 스펙 변경 감지 - 요구사항 업데이트 필요"
+        fi
+        
         if echo "${{ steps.changes.outputs.changed_files }}" | grep -q "terraform.tfvars"; then
           echo "✅ 변수 파일 변경 감지 - 설정 업데이트 필요"
         fi
