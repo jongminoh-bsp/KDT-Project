@@ -1,5 +1,4 @@
 # 🏗️ Infrastructure Requirements Specification
-# 이 파일을 수정하면 자동으로 인프라가 배포됩니다
 
 metadata:
   name: "kdt-project-infrastructure"
