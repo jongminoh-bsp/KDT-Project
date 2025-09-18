@@ -29,12 +29,11 @@ on:
         options:
         - plan
         - apply
+        - destroy
       change_summary:
         description: 'Summary of infrastructure changes'
         required: false
         type: string
-        - apply
-        - destroy
 
 env:
   TF_VERSION: '1.9.8'
