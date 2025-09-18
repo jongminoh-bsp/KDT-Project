@@ -257,3 +257,4 @@ deployment:
     email:
       enabled: false
       recipients: []
+# 새로운 요구사항 추가
