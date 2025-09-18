@@ -171,7 +171,7 @@ jobs:
                 "fields": [
                   {
                     "title": "📅 스캔 일시",
-                    "value": "${{ github.run_id }} - $(date '+%Y-%m-%d %H:%M:%S')",
+                    "value": "${{ github.run_id }} - ${{ github.run_number }}",
                     "short": true
                   },
                   {
@@ -186,17 +186,16 @@ jobs:
                   },
                   {
                     "title": "💰 예상 월간 절약",
-                    "value": "$$${{ steps.summary.outputs.estimated-savings }}",
+                    "value": "$${{ steps.summary.outputs.estimated-savings }}",
                     "short": true
                   },
                   {
                     "title": "📋 상세 내역",
-                    "value": "• EBS 볼륨: ${{ steps.scan-ebs.outputs.unused-volumes || '0' }}개\n• Elastic IP: ${{ steps.scan-eips.outputs.unattached-eips || '0' }}개\n• 오래된 스냅샷: ${{ steps.scan-snapshots.outputs.old-snapshots || '0' }}개",
+                    "value": "• EBS 볼륨: ${{ steps.scan-ebs.outputs.unused-volumes || '0' }}개\\n• Elastic IP: ${{ steps.scan-eips.outputs.unattached-eips || '0' }}개\\n• 오래된 스냅샷: ${{ steps.scan-snapshots.outputs.old-snapshots || '0' }}개",
                     "short": false
                   }
                 ],
-                "footer": "AWS Resource Optimization",
-                "ts": $(date +%s)
+                "footer": "AWS Resource Optimization"
               }
             ]
           }
