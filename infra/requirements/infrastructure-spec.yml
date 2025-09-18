@@ -9,8 +9,8 @@ metadata:
 
 # 🗑️ Infrastructure Management
 management:
-  create_all:
-    trigger: true  # 전체 인프라 다시 생성해줘
+  unused_resource_scan:
+    trigger: true  # 미사용 리소스 스캔해줘
 
 # 리소스 최적화 설정
 optimization:
