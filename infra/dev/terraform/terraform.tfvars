@@ -25,7 +25,7 @@ key_name = "ojm-key"
 cluster_name = "kdt-dev-eks-cluster"
 cluster_version = "1.33"
 node_instance_types = ["t3.medium"]
-node_desired_size = 2
+node_desired_size = 2  # 강제 동기화: 3 → 2
 node_min_size = 2
 node_max_size = 4
 
