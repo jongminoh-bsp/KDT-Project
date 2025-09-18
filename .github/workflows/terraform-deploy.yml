@@ -65,11 +65,30 @@ jobs:
       with:
         terraform_version: ${{ env.TF_VERSION }}
         
-    - name: 🔧 Terraform Format Check
+    - name: 🎨 Terraform Format Check & Auto-fix
       if: steps.changes.outputs.terraform == 'true'
       run: |
         cd infra/dev/terraform
-        terraform fmt -check -recursive
+        
+        # 포맷 체크
+        if ! terraform fmt -check -recursive; then
+          echo "⚠️ Terraform files need formatting. Auto-fixing..."
+          terraform fmt -recursive
+          
+          # 변경사항이 있으면 커밋
+          if git diff --quiet; then
+            echo "✅ No formatting changes needed"
+          else
+            echo "🔧 Formatting changes applied"
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add .
+            git commit -m "auto: Format Terraform files"
+            git push
+          fi
+        else
+          echo "✅ All Terraform files are properly formatted"
+        fi
         
     - name: ✅ Terraform Validate
       if: steps.changes.outputs.terraform == 'true'
