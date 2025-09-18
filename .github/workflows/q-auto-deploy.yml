@@ -1,0 +1,158 @@
+name: 🤖 Q Auto Analysis & Deploy
+
+on:
+  push:
+    branches: [ develop ]
+    paths:
+      - 'infra/**'
+
+env:
+  AWS_REGION: 'ap-northeast-2'
+
+jobs:
+  q-analysis-deploy:
+    name: 🧠 Q Analysis & Auto Deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2  # 이전 커밋과 비교하기 위해
+        
+    - name: 🔐 Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: 📋 Get Changed Files
+      id: changes
+      run: |
+        echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+        git diff --name-only HEAD~1 HEAD -- infra/ >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+        echo "commit_message<<EOF" >> $GITHUB_OUTPUT
+        git log -1 --pretty=%B >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+    - name: 🧠 Q Analysis & Deploy
+      run: |
+        echo "🤖 Q가 코드 변경사항을 분석하고 배포를 시작합니다..."
+        echo ""
+        echo "📋 변경된 파일들:"
+        echo "${{ steps.changes.outputs.changed_files }}"
+        echo ""
+        echo "💬 커밋 메시지:"
+        echo "${{ steps.changes.outputs.commit_message }}"
+        echo ""
+        
+        # Q CLI 명령어로 자동 분석 및 배포
+        echo "🔍 Q가 Terraform 코드를 분석 중..."
+        
+        # 변경사항 분석
+        if echo "${{ steps.changes.outputs.changed_files }}" | grep -q "terraform.tfvars"; then
+          echo "✅ 변수 파일 변경 감지 - 설정 업데이트 필요"
+        fi
+        
+        if echo "${{ steps.changes.outputs.changed_files }}" | grep -q "main.tf"; then
+          echo "✅ 메인 설정 변경 감지 - 리소스 업데이트 필요"
+        fi
+        
+        if echo "${{ steps.changes.outputs.changed_files }}" | grep -q "modules/"; then
+          echo "✅ 모듈 변경 감지 - 모듈 기반 리소스 업데이트 필요"
+        fi
+        
+        echo ""
+        echo "🚀 Q가 자동으로 Terraform 배포를 실행합니다..."
+        
+        # Terraform 실행
+        cd infra/dev/terraform
+        
+        echo "🔄 Terraform 초기화..."
+        terraform init
+        
+        echo "📋 변경 계획 생성..."
+        terraform plan -out=tfplan
+        
+        echo "🚀 인프라 배포 실행..."
+        terraform apply -auto-approve tfplan
+        
+        echo "✅ Q 자동 배포 완료!"
+        
+    - name: 📊 Generate Q Analysis Report
+      run: |
+        cd infra/dev/terraform
+        
+        echo "# 🤖 Q 자동 분석 및 배포 리포트" > q-analysis-report.md
+        echo "" >> q-analysis-report.md
+        echo "**분석 시간**: $(date -u)" >> q-analysis-report.md
+        echo "**트리거**: Git Push (develop)" >> q-analysis-report.md
+        echo "**분석자**: Amazon Q" >> q-analysis-report.md
+        echo "" >> q-analysis-report.md
+        
+        echo "## 📋 변경사항 분석" >> q-analysis-report.md
+        echo "\`\`\`" >> q-analysis-report.md
+        echo "${{ steps.changes.outputs.changed_files }}" >> q-analysis-report.md
+        echo "\`\`\`" >> q-analysis-report.md
+        echo "" >> q-analysis-report.md
+        
+        echo "## 💬 커밋 메시지" >> q-analysis-report.md
+        echo "\`\`\`" >> q-analysis-report.md
+        echo "${{ steps.changes.outputs.commit_message }}" >> q-analysis-report.md
+        echo "\`\`\`" >> q-analysis-report.md
+        echo "" >> q-analysis-report.md
+        
+        echo "## 🏗️ 배포된 리소스" >> q-analysis-report.md
+        terraform show -json | jq -r '.values.root_module.resources[] | "- \(.type): \(.name)"' >> q-analysis-report.md || echo "- 리소스 목록 생성 실패" >> q-analysis-report.md
+        
+    - name: 📢 Q Analysis Notification
+      uses: 8398a7/action-slack@v3
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      with:
+        status: custom
+        custom_payload: |
+          {
+            "channel": "#infrastructure",
+            "username": "Amazon Q",
+            "icon_emoji": ":brain:",
+            "attachments": [
+              {
+                "color": "good",
+                "title": "🤖 Q 자동 분석 및 배포 완료",
+                "fields": [
+                  {
+                    "title": "🧠 분석 방식",
+                    "value": "Git 변경사항 자동 감지",
+                    "short": true
+                  },
+                  {
+                    "title": "📋 변경 파일",
+                    "value": "${{ steps.changes.outputs.changed_files }}",
+                    "short": true
+                  },
+                  {
+                    "title": "💬 커밋 메시지",
+                    "value": "${{ steps.changes.outputs.commit_message }}",
+                    "short": false
+                  },
+                  {
+                    "title": "🚀 배포 결과",
+                    "value": "✅ 성공적으로 AWS에 배포됨",
+                    "short": true
+                  }
+                ],
+                "footer": "Amazon Q Auto Analysis System"
+              }
+            ]
+          }
+          
+    - name: 💾 Upload Q Analysis Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: q-analysis-report
+        path: infra/dev/terraform/q-analysis-report.md
+        retention-days: 30

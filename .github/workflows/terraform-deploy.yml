@@ -39,9 +39,9 @@ env:
   AWS_REGION: 'ap-northeast-2'
 
 jobs:
-  auto-deploy:
-    name: 🤖 Auto Deploy (Push Event)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+  # auto-deploy:
+  #   name: 🤖 Auto Deploy (Push Event) - DISABLED (Q Analysis 사용)
+  #   if: false  # Q 자동 분석 시스템으로 대체됨
     runs-on: ubuntu-latest
     
     steps:
