@@ -146,7 +146,21 @@ jobs:
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     
     steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 🔍 Check for Resource Scan Request
+      id: check-scan
+      run: |
+        if grep -q "trigger.*true" infra/requirements/infrastructure-spec.yml; then
+          echo "resource-scan-requested=true" >> $GITHUB_OUTPUT
+          echo "🔍 Resource scan requested"
+        else
+          echo "resource-scan-requested=false" >> $GITHUB_OUTPUT
+        fi
+        
     - name: 🚀 Trigger Terraform Deployment
+      if: steps.check-scan.outputs.resource-scan-requested != 'true'
       uses: actions/github-script@v7
       env:
         CHANGE_SUMMARY: ${{ needs.detect-changes.outputs.change-summary }}
@@ -167,6 +181,24 @@ jobs:
           console.log('🚀 Terraform deployment triggered');
           console.log('Workflow run:', result.status);
           console.log('Change summary:', process.env.CHANGE_SUMMARY);
+          
+    - name: 🔍 Trigger Resource Scanner
+      if: steps.check-scan.outputs.resource-scan-requested == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const result = await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'unused-resource-scanner.yml',
+            ref: context.ref,
+            inputs: {
+              scan_type: 'full'
+            }
+          });
+          
+          console.log('🔍 Resource scanner triggered');
+          console.log('Workflow run:', result.status);
           
     - name: 📝 Comment on PR
       if: github.event_name == 'pull_request'
