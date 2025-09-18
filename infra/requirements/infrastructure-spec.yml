@@ -85,8 +85,8 @@ kubernetes:
         ami_type: "AL2023_x86_64_STANDARD"
         capacity_type: "ON_DEMAND"
         scaling:
-          desired_size: 2  # 노드 2개로 유지
-          min_size: 1
+          desired_size: 2
+          min_size: 2
           max_size: 4
         disk_size: 20
         
