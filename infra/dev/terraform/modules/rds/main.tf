@@ -1,6 +1,6 @@
 # Secrets Manager for RDS password
 resource "aws_secretsmanager_secret" "rds_password" {
-  name        = "${var.name_prefix}-rds-password"
+  name        = "${var.name_prefix}-rds-password-${formatdate("YYYYMMDD-hhmm", timestamp())}"
   description = "RDS password for ${var.name_prefix}"
 
   tags = merge(var.common_tags, {
