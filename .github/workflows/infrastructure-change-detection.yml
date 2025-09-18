@@ -148,6 +148,8 @@ jobs:
     steps:
     - name: 🚀 Trigger Terraform Deployment
       uses: actions/github-script@v7
+      env:
+        CHANGE_SUMMARY: ${{ needs.detect-changes.outputs.change-summary }}
       with:
         script: |
           const result = await github.rest.actions.createWorkflowDispatch({
@@ -158,12 +160,13 @@ jobs:
             inputs: {
               environment: 'dev',
               action: 'apply',
-              change_summary: `${{ needs.detect-changes.outputs.change-summary }}`
+              change_summary: process.env.CHANGE_SUMMARY || ''
             }
           });
           
           console.log('🚀 Terraform deployment triggered');
           console.log('Workflow run:', result.status);
+          console.log('Change summary:', process.env.CHANGE_SUMMARY);
           
     - name: 📝 Comment on PR
       if: github.event_name == 'pull_request'
