@@ -96,6 +96,9 @@ jobs:
         echo "🔄 Terraform 초기화..."
         terraform init
         
+        echo "🔓 기존 락 해제 시도..."
+        terraform force-unlock -force 7bb26e87-0b31-203c-8539-14a5d96fd760 || true
+        
         echo "📋 변경 계획 생성..."
         terraform plan -out=tfplan
         
