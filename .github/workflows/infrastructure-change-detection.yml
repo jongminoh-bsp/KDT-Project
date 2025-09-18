@@ -1,14 +1,15 @@
 name: 🔍 Infrastructure Change Detection
 
 on:
-  push:
-    branches: [ main, develop ]
-    paths:
-      - 'infra/requirements/infrastructure-spec.yml'
-  pull_request:
-    branches: [ main, develop ]
-    paths:
-      - 'infra/requirements/infrastructure-spec.yml'
+  # push:  # Q 자동 시스템으로 대체됨
+  #   branches: [ main, develop ]
+  #   paths:
+  #     - 'infra/requirements/infrastructure-spec.yml'
+  # pull_request:  # Q 자동 시스템으로 대체됨
+  #   branches: [ main, develop ]
+  #   paths:
+  #     - 'infra/requirements/infrastructure-spec.yml'
+  workflow_dispatch:  # 수동 실행만 허용
 
 permissions:
   contents: write
