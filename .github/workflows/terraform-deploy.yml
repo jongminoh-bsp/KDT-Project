@@ -1,6 +1,10 @@
 name: 🚀 Terraform Infrastructure Deployment
 
 on:
+  push:
+    branches: [ develop ]
+    paths:
+      - 'infra/**'
   pull_request:
     branches: [ main, develop ]
     paths:
@@ -35,6 +39,84 @@ env:
   AWS_REGION: 'ap-northeast-2'
 
 jobs:
+  auto-deploy:
+    name: 🤖 Auto Deploy (Push Event)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 🔐 Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: ⚙️ Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+        
+    - name: 🔄 Terraform Init
+      run: |
+        cd infra/dev/terraform
+        terraform init
+        
+    - name: 📋 Terraform Plan
+      run: |
+        cd infra/dev/terraform
+        terraform plan -out=tfplan
+        
+    - name: 🚀 Terraform Apply
+      run: |
+        cd infra/dev/terraform
+        terraform apply -auto-approve tfplan
+        
+    - name: 📢 Auto Deploy Notification
+      uses: 8398a7/action-slack@v3
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      with:
+        status: custom
+        custom_payload: |
+          {
+            "channel": "#infrastructure",
+            "username": "Q Auto Deploy",
+            "icon_emoji": ":robot_face:",
+            "attachments": [
+              {
+                "color": "good",
+                "title": "🤖 자동 배포 완료",
+                "fields": [
+                  {
+                    "title": "트리거",
+                    "value": "Git Push (develop)",
+                    "short": true
+                  },
+                  {
+                    "title": "커밋",
+                    "value": "${{ github.event.head_commit.message }}",
+                    "short": true
+                  },
+                  {
+                    "title": "작성자",
+                    "value": "${{ github.actor }}",
+                    "short": true
+                  },
+                  {
+                    "title": "환경",
+                    "value": "dev",
+                    "short": true
+                  }
+                ],
+                "footer": "Amazon Q Auto Deploy System"
+              }
+            ]
+          }
+
   terraform-check:
     name: 🔍 Terraform Validation
     runs-on: ubuntu-latest
