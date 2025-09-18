@@ -1,0 +1,200 @@
+name: 🔍 Unused Resource Scanner
+
+on:
+  schedule:
+    # 매주 월요일 오전 9시 (KST)
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Scan type'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - ebs-only
+          - security-groups-only
+          - snapshots-only
+      days_old:
+        description: 'Days old for snapshot scan'
+        required: false
+        default: '30'
+        type: string
+
+env:
+  AWS_REGION: ap-northeast-2
+
+jobs:
+  scan-unused-resources:
+    name: 🔍 Scan Unused Resources
+    runs-on: ubuntu-latest
+    
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 🔐 Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: 📦 Install Dependencies
+      run: |
+        pip install boto3
+        
+    - name: 🔍 Scan Unused EBS Volumes
+      id: scan-ebs
+      if: github.event.inputs.scan_type == 'full' || github.event.inputs.scan_type == 'ebs-only' || github.event.inputs.scan_type == ''
+      run: |
+        echo "🔍 Scanning unused EBS volumes..."
+        
+        UNUSED_VOLUMES=$(aws ec2 describe-volumes \
+          --region $AWS_REGION \
+          --filters Name=status,Values=available \
+          --query 'length(Volumes)')
+        
+        echo "unused-volumes=$UNUSED_VOLUMES" >> $GITHUB_OUTPUT
+        
+        if [ "$UNUSED_VOLUMES" -gt 0 ]; then
+          echo "⚠️ Found $UNUSED_VOLUMES unused EBS volumes"
+          aws ec2 describe-volumes \
+            --region $AWS_REGION \
+            --filters Name=status,Values=available \
+            --query 'Volumes[*].{VolumeId:VolumeId,Size:Size,VolumeType:VolumeType,CreateTime:CreateTime}' \
+            --output table
+        else
+          echo "✅ No unused EBS volumes found"
+        fi
+        
+    - name: 🔍 Scan Unattached Elastic IPs
+      id: scan-eips
+      if: github.event.inputs.scan_type == 'full' || github.event.inputs.scan_type == ''
+      run: |
+        echo "🔍 Scanning unattached Elastic IPs..."
+        
+        UNATTACHED_EIPS=$(aws ec2 describe-addresses \
+          --region $AWS_REGION \
+          --query 'length(Addresses[?AssociationId==null])')
+        
+        echo "unattached-eips=$UNATTACHED_EIPS" >> $GITHUB_OUTPUT
+        
+        if [ "$UNATTACHED_EIPS" -gt 0 ]; then
+          echo "⚠️ Found $UNATTACHED_EIPS unattached Elastic IPs"
+          aws ec2 describe-addresses \
+            --region $AWS_REGION \
+            --query 'Addresses[?AssociationId==null].{AllocationId:AllocationId,PublicIp:PublicIp}' \
+            --output table
+        else
+          echo "✅ No unattached Elastic IPs found"
+        fi
+        
+    - name: 🔍 Scan Old Snapshots
+      id: scan-snapshots
+      if: github.event.inputs.scan_type == 'full' || github.event.inputs.scan_type == 'snapshots-only' || github.event.inputs.scan_type == ''
+      run: |
+        echo "🔍 Scanning old snapshots..."
+        
+        DAYS_OLD="${{ github.event.inputs.days_old || '30' }}"
+        CUTOFF_DATE=$(date -d "$DAYS_OLD days ago" --iso-8601)
+        
+        OLD_SNAPSHOTS=$(aws ec2 describe-snapshots \
+          --region $AWS_REGION \
+          --owner-ids self \
+          --query "length(Snapshots[?StartTime<'$CUTOFF_DATE'])")
+        
+        echo "old-snapshots=$OLD_SNAPSHOTS" >> $GITHUB_OUTPUT
+        
+        if [ "$OLD_SNAPSHOTS" -gt 0 ]; then
+          echo "⚠️ Found $OLD_SNAPSHOTS snapshots older than $DAYS_OLD days"
+          aws ec2 describe-snapshots \
+            --region $AWS_REGION \
+            --owner-ids self \
+            --query "Snapshots[?StartTime<'$CUTOFF_DATE'].{SnapshotId:SnapshotId,Description:Description,StartTime:StartTime,VolumeSize:VolumeSize}" \
+            --output table
+        else
+          echo "✅ No old snapshots found"
+        fi
+        
+    - name: 📊 Generate Summary Report
+      id: summary
+      run: |
+        UNUSED_VOLUMES="${{ steps.scan-ebs.outputs.unused-volumes || '0' }}"
+        UNATTACHED_EIPS="${{ steps.scan-eips.outputs.unattached-eips || '0' }}"
+        OLD_SNAPSHOTS="${{ steps.scan-snapshots.outputs.old-snapshots || '0' }}"
+        
+        TOTAL_RESOURCES=$((UNUSED_VOLUMES + UNATTACHED_EIPS + OLD_SNAPSHOTS))
+        
+        # 예상 비용 계산 (대략적)
+        EBS_COST=$(echo "$UNUSED_VOLUMES * 10" | bc -l 2>/dev/null || echo "0")
+        EIP_COST=$(echo "$UNATTACHED_EIPS * 3.65" | bc -l 2>/dev/null || echo "0")
+        SNAPSHOT_COST=$(echo "$OLD_SNAPSHOTS * 5" | bc -l 2>/dev/null || echo "0")
+        TOTAL_COST=$(echo "$EBS_COST + $EIP_COST + $SNAPSHOT_COST" | bc -l 2>/dev/null || echo "0")
+        
+        echo "total-resources=$TOTAL_RESOURCES" >> $GITHUB_OUTPUT
+        echo "estimated-savings=$TOTAL_COST" >> $GITHUB_OUTPUT
+        
+        echo "📊 Summary:"
+        echo "- Unused EBS Volumes: $UNUSED_VOLUMES"
+        echo "- Unattached Elastic IPs: $UNATTACHED_EIPS" 
+        echo "- Old Snapshots: $OLD_SNAPSHOTS"
+        echo "- Total Resources: $TOTAL_RESOURCES"
+        echo "- Estimated Monthly Savings: \$$TOTAL_COST"
+        
+    - name: 📢 Send Slack Notification
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: custom
+        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        custom_payload: |
+          {
+            "channel": "#infrastructure",
+            "username": "AWS Resource Scanner",
+            "icon_emoji": ":mag:",
+            "attachments": [
+              {
+                "color": "${{ steps.summary.outputs.total-resources > 0 && 'warning' || 'good' }}",
+                "title": "🔍 미사용 리소스 스캔 결과",
+                "fields": [
+                  {
+                    "title": "📅 스캔 일시",
+                    "value": "${{ github.run_id }} - $(date '+%Y-%m-%d %H:%M:%S')",
+                    "short": true
+                  },
+                  {
+                    "title": "🌍 리전",
+                    "value": "${{ env.AWS_REGION }}",
+                    "short": true
+                  },
+                  {
+                    "title": "📊 총 미사용 리소스",
+                    "value": "${{ steps.summary.outputs.total-resources }}개",
+                    "short": true
+                  },
+                  {
+                    "title": "💰 예상 월간 절약",
+                    "value": "$$${{ steps.summary.outputs.estimated-savings }}",
+                    "short": true
+                  },
+                  {
+                    "title": "📋 상세 내역",
+                    "value": "• EBS 볼륨: ${{ steps.scan-ebs.outputs.unused-volumes || '0' }}개\n• Elastic IP: ${{ steps.scan-eips.outputs.unattached-eips || '0' }}개\n• 오래된 스냅샷: ${{ steps.scan-snapshots.outputs.old-snapshots || '0' }}개",
+                    "short": false
+                  }
+                ],
+                "footer": "AWS Resource Optimization",
+                "ts": $(date +%s)
+              }
+            ]
+          }

@@ -8,6 +8,15 @@ metadata:
   owner: "kdt-team"
   description: "KDT 프로젝트 개발 환경 인프라 - 자동 포맷 기능 추가 완료"
 
+# 리소스 최적화 설정
+optimization:
+  unused_resource_scan:
+    enabled: true
+    schedule: "weekly"  # daily, weekly, monthly
+    snapshot_retention_days: 30
+    auto_cleanup: false  # true로 설정하면 자동 정리
+    notification: true
+
 # 🌐 네트워크 설정
 network:
   vpc:
