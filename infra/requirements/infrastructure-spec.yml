@@ -6,7 +6,7 @@ metadata:
   version: "1.0.0"
   environment: "dev"
   owner: "kdt-team"
-  description: "KDT 프로젝트 개발 환경 인프라 - 변경사항 요약 테스트"
+  description: "KDT 프로젝트 개발 환경 인프라 - 자동 포맷 기능 추가 완료"
 
 # 🌐 네트워크 설정
 network:
