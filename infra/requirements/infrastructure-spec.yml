@@ -75,7 +75,7 @@ kubernetes:
         ami_type: "AL2023_x86_64_STANDARD"
         capacity_type: "ON_DEMAND"
         scaling:
-          desired_size: 3  # 노드 3개로 설정
+          desired_size: 2  # 노드 2개로 축소
           min_size: 1
           max_size: 4
         disk_size: 20
