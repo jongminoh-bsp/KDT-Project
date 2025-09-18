@@ -159,7 +159,7 @@ jobs:
         webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
         custom_payload: |
           {
-            "channel": "#infrastructure-optimization",
+            "channel": "#optimization",
             "username": "AWS Cost Optimizer",
             "icon_emoji": ":moneybag:",
             "attachments": [
