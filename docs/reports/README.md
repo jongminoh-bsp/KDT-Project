@@ -25,6 +25,7 @@ AWS 리소스 관리, 인프라 구축/정리, 비용 최적화 등
 | 004 | Infrastructure | [인프라 리소스 정리](./infrastructure/004-infrastructure-cleanup.md) | 2025-09-17 | High | ✅ 완료 |
 | 005 | Infrastructure | [보안 그룹 삭제 최적화](./infrastructure/005-security-group-deletion-optimization.md) | 2025-09-17 | Medium | ✅ 완료 |
 | 006 | Security | [EKS 접근 권한 문제 해결](./security/006-eks-access-permission-fix.md) | 2025-09-17 | High | ✅ 완료 |
+| 009 | Automation | [미사용 리소스 스캐너 구축 및 자동화](./automation/009-unused-resource-scanner-implementation.md) | 2025-09-18 | Medium | ✅ 완료 |
 
 ## 📋 카테고리별 요약
 
@@ -40,6 +41,11 @@ AWS 리소스 관리, 인프라 구축/정리, 비용 최적화 등
 ### ⚙️ Feature (1개)
 - 표준 네이밍 컨벤션 적용
 - 공통 태깅 전략 구현
+
+### 🤖 Automation (1개)
+- 미사용 리소스 스캐너 구축
+- 자연어 명령 시스템 구현
+- Slack 알림 자동화
 
 ### 🏗️ Infrastructure (2개)
 - 57개 AWS 리소스 정리
