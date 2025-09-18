@@ -145,8 +145,8 @@ jobs:
                     "short": true
                   },
                   {
-                    "title": "💬 커밋 메시지",
-                    "value": "${{ steps.changes.outputs.commit_message }}",
+                    "title": "💬 커밋",
+                    "value": "${{ github.event.head_commit.message }}",
                     "short": false
                   },
                   {
