@@ -61,6 +61,16 @@ jobs:
         # 변경사항 분석
         if echo "${{ steps.changes.outputs.changed_files }}" | grep -q "infrastructure-spec.yml"; then
           echo "✅ 인프라 스펙 변경 감지 - 요구사항 업데이트 필요"
+          
+          # 삭제 명령 확인
+          if grep -q "destroy_all:" infra/requirements/infrastructure-spec.yml && grep -q "trigger: true" infra/requirements/infrastructure-spec.yml; then
+            echo "🗑️ 전체 인프라 삭제 명령 감지!"
+            echo "🚨 Terraform destroy 실행 중..."
+            cd infra/dev/terraform
+            terraform destroy -auto-approve
+            echo "✅ 전체 인프라 삭제 완료!"
+            exit 0
+          fi
         fi
         
         if echo "${{ steps.changes.outputs.changed_files }}" | grep -q "terraform.tfvars"; then

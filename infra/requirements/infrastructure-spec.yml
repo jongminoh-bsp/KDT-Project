@@ -8,6 +8,11 @@ metadata:
   owner: "kdt-team"
   description: "KDT 프로젝트 개발 환경 인프라 - 자동 포맷 기능 추가 완료"
 
+# 🗑️ Infrastructure Management
+management:
+  destroy_all:
+    trigger: true  # 전체 인프라 정리하고 다시 하고 싶음
+
 # 리소스 최적화 설정
 optimization:
   unused_resource_scan:

@@ -1,0 +1,91 @@
+name: 🗑️ Q Infrastructure Destroy All
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_destroy:
+        description: '정말로 모든 인프라를 삭제하시겠습니까? (yes/no)'
+        required: true
+        default: 'no'
+        type: choice
+        options:
+        - 'no'
+        - 'yes'
+
+env:
+  AWS_REGION: 'ap-northeast-2'
+
+jobs:
+  destroy-all:
+    name: 🗑️ Destroy All Infrastructure
+    if: github.event.inputs.confirm_destroy == 'yes'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 🔐 Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: ⚙️ Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: '1.9.8'
+        
+    - name: 🔄 Terraform Init
+      run: |
+        cd infra/dev/terraform
+        terraform init
+        
+    - name: 🗑️ Terraform Destroy
+      run: |
+        cd infra/dev/terraform
+        echo "🗑️ Q가 전체 인프라를 삭제합니다..."
+        terraform destroy -auto-approve
+        
+    - name: 📢 Destroy Notification
+      uses: 8398a7/action-slack@v3
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      with:
+        status: custom
+        custom_payload: |
+          {
+            "channel": "#infrastructure",
+            "username": "Amazon Q",
+            "icon_emoji": ":wastebasket:",
+            "attachments": [
+              {
+                "color": "warning",
+                "title": "🗑️ 전체 인프라 삭제 완료",
+                "fields": [
+                  {
+                    "title": "🧠 실행자",
+                    "value": "Amazon Q Auto System",
+                    "short": true
+                  },
+                  {
+                    "title": "🌍 리전",
+                    "value": "${{ env.AWS_REGION }}",
+                    "short": true
+                  },
+                  {
+                    "title": "🗑️ 삭제 범위",
+                    "value": "모든 AWS 리소스",
+                    "short": false
+                  },
+                  {
+                    "title": "✅ 상태",
+                    "value": "삭제 완료 - 깨끗한 상태",
+                    "short": true
+                  }
+                ],
+                "footer": "Amazon Q Infrastructure Management"
+              }
+            ]
+          }
