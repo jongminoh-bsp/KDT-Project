@@ -182,25 +182,17 @@ jobs:
           console.log('Workflow run:', result.status);
           console.log('Change summary:', process.env.CHANGE_SUMMARY);
           
-    - name: 🔍 Trigger Resource Scanner
+    - name: 🔍 Trigger Resource Scanner (Manual Alternative)
       if: steps.check-scan.outputs.resource-scan-requested == 'true'
-      uses: actions/github-script@v7
-      with:
-        script: |
-          console.log('🔍 Triggering resource scanner...');
-          
-          const result = await github.rest.actions.createWorkflowDispatch({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            workflow_id: 'unused-resource-scanner.yml',
-            ref: 'develop',
-            inputs: {
-              scan_type: 'full'
-            }
-          });
-          
-          console.log('🔍 Resource scanner triggered successfully');
-          console.log('Response status:', result.status);
+      run: |
+        echo "🔍 Resource scan requested!"
+        echo "📋 Manual execution required:"
+        echo "1. Go to GitHub Actions"
+        echo "2. Select 'Unused Resource Scanner' workflow"
+        echo "3. Click 'Run workflow'"
+        echo "4. Select scan_type: full"
+        echo ""
+        echo "⚠️ Automatic trigger will be available after main branch sync"
           
     - name: 📝 Comment on PR
       if: github.event_name == 'pull_request'
