@@ -154,9 +154,10 @@ jobs:
     - name: 📢 Send Slack Notification
       if: always()
       uses: 8398a7/action-slack@v3
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       with:
         status: custom
-        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
         custom_payload: |
           {
             "channel": "#optimization",
