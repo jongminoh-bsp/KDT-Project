@@ -1,0 +1,42 @@
+name: 🏗️ Infrastructure Change Request
+description: 자연어로 인프라 변경 요청하기
+title: "[INFRA] "
+labels: ["infrastructure", "automation"]
+body:
+  - type: textarea
+    id: request
+    attributes:
+      label: 📝 변경 요청
+      description: 자연어로 원하는 인프라 변경사항을 설명해주세요
+      placeholder: |
+        예시:
+        - "EKS 노드를 3개로 늘려줘"
+        - "Management 서버를 t3.large로 업그레이드해줘"
+        - "RDS를 db.t3.small로 변경해줘"
+        - "새로운 서브넷 10.30.30.0/24 추가해줘"
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 🌍 환경
+      description: 어떤 환경에 적용할까요?
+      options:
+        - dev
+        - staging
+        - prod
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: priority
+    attributes:
+      label: ⚡ 우선순위
+      options:
+        - 낮음 (Low)
+        - 보통 (Medium) 
+        - 높음 (High)
+        - 긴급 (Critical)
+    validations:
+      required: true
