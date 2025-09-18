@@ -159,9 +159,9 @@ jobs:
         webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
         custom_payload: |
           {
-            "channel": "#infrastructure",
-            "username": "AWS Resource Scanner",
-            "icon_emoji": ":mag:",
+            "channel": "#infrastructure-optimization",
+            "username": "AWS Cost Optimizer",
+            "icon_emoji": ":moneybag:",
             "attachments": [
               {
                 "color": "${{ steps.summary.outputs.total-resources > 0 && 'warning' || 'good' }}",
