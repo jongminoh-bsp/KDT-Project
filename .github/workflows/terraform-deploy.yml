@@ -1,10 +1,10 @@
 name: 🚀 Terraform Infrastructure Deployment
 
 on:
-  push:
-    branches: [ develop ]
-    paths:
-      - 'infra/**'
+  # push:  # Q Auto Deploy 시스템으로 완전 대체됨
+  #   branches: [ develop ]
+  #   paths:
+  #     - 'infra/**'
   pull_request:
     branches: [ main, develop ]
     paths:
