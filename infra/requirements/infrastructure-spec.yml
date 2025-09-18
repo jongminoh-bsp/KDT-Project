@@ -9,8 +9,8 @@ metadata:
 
 # 🗑️ Infrastructure Management
 management:
-  destroy_all:
-    trigger: true  # 전체 인프라 정리하고 다시 하고 싶음
+  create_all:
+    trigger: true  # 전체 인프라 다시 생성해줘
 
 # 리소스 최적화 설정
 optimization:
