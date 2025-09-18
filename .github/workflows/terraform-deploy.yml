@@ -314,6 +314,3 @@ jobs:
           ]
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        echo "Please check the workflow logs for details."
-        echo "Environment: ${{ github.event.inputs.environment || 'dev' }}"
-        echo "Triggered by: ${{ github.actor }}"
