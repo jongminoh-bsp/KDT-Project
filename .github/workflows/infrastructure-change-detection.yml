@@ -187,18 +187,20 @@ jobs:
       uses: actions/github-script@v7
       with:
         script: |
+          console.log('🔍 Triggering resource scanner...');
+          
           const result = await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'unused-resource-scanner.yml',
-            ref: context.ref,
+            ref: 'develop',
             inputs: {
               scan_type: 'full'
             }
           });
           
-          console.log('🔍 Resource scanner triggered');
-          console.log('Workflow run:', result.status);
+          console.log('🔍 Resource scanner triggered successfully');
+          console.log('Response status:', result.status);
           
     - name: 📝 Comment on PR
       if: github.event_name == 'pull_request'
