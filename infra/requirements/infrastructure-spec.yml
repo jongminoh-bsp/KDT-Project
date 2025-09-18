@@ -16,7 +16,7 @@ optimization:
     snapshot_retention_days: 30
     auto_cleanup: false  # true로 설정하면 자동 정리
     notification: true
-    trigger: true  # 미사용 리소스 스캐너 실행해줘
+    trigger: true  # 디버깅: 왜 Unused Resource Scanner가 안 되지?
 
 # 🌐 네트워크 설정
 network:
