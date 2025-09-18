@@ -16,7 +16,7 @@ optimization:
     snapshot_retention_days: 30
     auto_cleanup: false  # true로 설정하면 자동 정리
     notification: true
-    trigger: true  # 미사용 리소스 스캔해줘
+    trigger: true  # #optimization 채널 테스트
 
 # 🌐 네트워크 설정
 network:
