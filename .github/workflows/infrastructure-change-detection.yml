@@ -157,7 +157,8 @@ jobs:
             ref: context.ref,
             inputs: {
               environment: 'dev',
-              action: 'apply'
+              action: 'apply',
+              change_summary: `${{ needs.detect-changes.outputs.change-summary }}`
             }
           });
           

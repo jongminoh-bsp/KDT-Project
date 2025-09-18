@@ -29,6 +29,11 @@ on:
         options:
         - plan
         - apply
+      change_summary:
+        description: 'Summary of infrastructure changes'
+        required: false
+        type: string
+        - apply
         - destroy
 
 env:
@@ -255,6 +260,8 @@ jobs:
           *Commit:* ${{ github.sha }}
           
           ✅ All infrastructure changes have been applied successfully!
+          
+          ${{ github.event.inputs.change_summary && format('**📋 Changes Applied:**{0}{1}', '\n', github.event.inputs.change_summary) || '' }}
         fields: |
           [
             {
@@ -299,6 +306,8 @@ jobs:
           *Commit:* ${{ github.sha }}
           
           💥 Infrastructure deployment encountered errors. Please check the logs.
+          
+          ${{ github.event.inputs.change_summary && format('**📋 Attempted Changes:**{0}{1}', '\n', github.event.inputs.change_summary) || '' }}
         fields: |
           [
             {
