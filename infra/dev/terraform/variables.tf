@@ -81,3 +81,45 @@ variable "cluster_version" {
   description = "Kubernetes version for EKS cluster"
   type        = string
 }
+
+variable "node_instance_types" {
+  description = "Instance types for EKS node group"
+  type        = list(string)
+  default     = ["t3.medium"]
+}
+
+variable "node_desired_size" {
+  description = "Desired number of nodes in the EKS node group"
+  type        = number
+  default     = 3
+}
+
+variable "node_min_size" {
+  description = "Minimum number of nodes in the EKS node group"
+  type        = number
+  default     = 1
+}
+
+variable "node_max_size" {
+  description = "Maximum number of nodes in the EKS node group"
+  type        = number
+  default     = 4
+}
+
+variable "db_engine" {
+  description = "Database engine"
+  type        = string
+  default     = "mysql"
+}
+
+variable "db_engine_version" {
+  description = "Database engine version"
+  type        = string
+  default     = "8.0.41"
+}
+
+variable "db_instance_class" {
+  description = "Database instance class"
+  type        = string
+  default     = "db.t3.micro"
+}
