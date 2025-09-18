@@ -65,9 +65,9 @@ jobs:
           # 삭제 명령 확인
           if grep -q "destroy_all:" infra/requirements/infrastructure-spec.yml && grep -q "trigger: true" infra/requirements/infrastructure-spec.yml; then
             echo "🗑️ 전체 인프라 삭제 명령 감지!"
-            echo "🔄 Terraform 초기화 중..."
+            echo "🔄 Terraform 백엔드 재구성 중..."
             cd infra/dev/terraform
-            terraform init
+            terraform init -reconfigure
             echo "🚨 Terraform destroy 실행 중..."
             terraform destroy -auto-approve
             echo "✅ 전체 인프라 삭제 완료!"
