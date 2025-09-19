@@ -62,6 +62,21 @@ jobs:
         if echo "${{ steps.changes.outputs.changed_files }}" | grep -q "infrastructure-spec.yml"; then
           echo "✅ 인프라 스펙 변경 감지 - 요구사항 업데이트 필요"
           
+          # 미사용 리소스 스캔 명령 확인
+          if grep -q "unused_resource_scan:" infra/requirements/infrastructure-spec.yml && grep -q "trigger: true" infra/requirements/infrastructure-spec.yml; then
+            echo "🔍 미사용 리소스 스캔 명령 감지!"
+            echo "📊 AWS 리소스 상태만 조회합니다 (plan/apply 생략)"
+            
+            # 읽기 전용 스캔 실행
+            echo "🔄 AWS CLI로 리소스 현황 조회 중..."
+            aws ec2 describe-instances --region ap-northeast-2 --query 'Reservations[*].Instances[*].[InstanceId,State.Name,InstanceType]' --output table || true
+            aws ec2 describe-volumes --region ap-northeast-2 --query 'Volumes[*].[VolumeId,State,Size,Attachments[0].InstanceId]' --output table || true
+            aws ec2 describe-security-groups --region ap-northeast-2 --query 'SecurityGroups[*].[GroupId,GroupName,Description]' --output table || true
+            
+            echo "✅ 미사용 리소스 스캔 완료! (Terraform 실행 생략)"
+            exit 0
+          fi
+          
           # 삭제 명령 확인
           if grep -q "destroy_all:" infra/requirements/infrastructure-spec.yml && grep -q "trigger: true" infra/requirements/infrastructure-spec.yml; then
             echo "🗑️ 전체 인프라 삭제 명령 감지!"
