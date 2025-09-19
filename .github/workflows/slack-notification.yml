@@ -1,0 +1,26 @@
+name: 📢 Slack Notification
+
+on:
+  push:
+    branches: [ main, develop, staging ]
+  pull_request:
+    branches: [ main, develop, staging ]
+  workflow_run:
+    workflows: ["🤖 Q Auto Analysis & Deploy", "🏗️ Terraform Deploy", "🔍 Unused Resource Scanner"]
+    types: [completed]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 📢 Send Slack Notification
+      uses: 8398a7/action-slack@v3
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      with:
+        status: ${{ job.status }}
+        channel: '#infrastructure'
+        username: 'GitHub Actions'
+        icon_emoji: ':github:'
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+        if_mention: failure,cancelled

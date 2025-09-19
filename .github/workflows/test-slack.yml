@@ -1,0 +1,60 @@
+name: 🧪 Test Slack Notification
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: '테스트 메시지'
+        required: false
+        default: 'Slack 알림 테스트입니다!'
+      channel:
+        description: 'Slack 채널'
+        required: false
+        default: '#infrastructure'
+
+jobs:
+  test-slack:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 📢 Send Test Message
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+        --data '{
+          "channel": "${{ github.event.inputs.channel || '#infrastructure' }}",
+          "username": "Test Bot",
+          "icon_emoji": ":test_tube:",
+          "text": "🧪 GitHub Actions 테스트",
+          "attachments": [{
+            "color": "#36a64f",
+            "title": "📋 테스트 정보",
+            "fields": [
+              {
+                "title": "💬 메시지",
+                "value": "${{ github.event.inputs.message || 'Slack 알림 테스트입니다!' }}",
+                "short": false
+              },
+              {
+                "title": "👤 실행자",
+                "value": "${{ github.actor }}",
+                "short": true
+              },
+              {
+                "title": "⏰ 실행 시간",
+                "value": "'$(date -u)'",
+                "short": true
+              },
+              {
+                "title": "🔗 워크플로우",
+                "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|실행 로그 보기>",
+                "short": false
+              }
+            ],
+            "footer": "KDT Project Test"
+          }]
+        }' \
+        ${{ secrets.SLACK_WEBHOOK_URL }}
+        
+    - name: ✅ Test Complete
+      run: |
+        echo "✅ Slack 알림 테스트가 완료되었습니다!"
+        echo "📱 Slack 채널을 확인해주세요: ${{ github.event.inputs.channel || '#infrastructure' }}"

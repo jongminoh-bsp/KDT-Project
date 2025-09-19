@@ -1,0 +1,209 @@
+name: 🚀 Custom Slack Notifications
+
+on:
+  push:
+    branches: [ main, develop, staging ]
+  pull_request:
+    types: [opened, closed, merged]
+  issues:
+    types: [opened, closed]
+  release:
+    types: [published]
+
+jobs:
+  slack-notify:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+      
+    - name: 📊 Get Commit Info
+      id: commit
+      run: |
+        echo "author=$(git log -1 --pretty=format:'%an')" >> $GITHUB_OUTPUT
+        echo "message=$(git log -1 --pretty=format:'%s')" >> $GITHUB_OUTPUT
+        echo "hash=$(git log -1 --pretty=format:'%h')" >> $GITHUB_OUTPUT
+        echo "timestamp=$(date -u)" >> $GITHUB_OUTPUT
+        
+    - name: 📢 Push Notification
+      if: github.event_name == 'push'
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+        --data '{
+          "channel": "#infrastructure",
+          "username": "GitHub Bot",
+          "icon_emoji": ":rocket:",
+          "text": "🚀 새로운 코드가 푸시되었습니다!",
+          "attachments": [{
+            "color": "good",
+            "title": "📋 커밋 정보",
+            "fields": [
+              {
+                "title": "👤 작성자",
+                "value": "${{ steps.commit.outputs.author }}",
+                "short": true
+              },
+              {
+                "title": "🌿 브랜치",
+                "value": "${{ github.ref_name }}",
+                "short": true
+              },
+              {
+                "title": "💬 메시지",
+                "value": "${{ steps.commit.outputs.message }}",
+                "short": false
+              },
+              {
+                "title": "🔗 링크",
+                "value": "<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ steps.commit.outputs.hash }}>",
+                "short": true
+              }
+            ],
+            "footer": "KDT Project",
+            "ts": "${{ github.event.head_commit.timestamp }}"
+          }]
+        }' \
+        ${{ secrets.SLACK_WEBHOOK_URL }}
+        
+    - name: 📝 PR Notification
+      if: github.event_name == 'pull_request'
+      run: |
+        ACTION_COLOR="warning"
+        ACTION_EMOJI=":eyes:"
+        ACTION_TEXT="PR이 열렸습니다"
+        
+        if [ "${{ github.event.action }}" = "closed" ]; then
+          if [ "${{ github.event.pull_request.merged }}" = "true" ]; then
+            ACTION_COLOR="good"
+            ACTION_EMOJI=":white_check_mark:"
+            ACTION_TEXT="PR이 머지되었습니다"
+          else
+            ACTION_COLOR="danger"
+            ACTION_EMOJI=":x:"
+            ACTION_TEXT="PR이 닫혔습니다"
+          fi
+        fi
+        
+        curl -X POST -H 'Content-type: application/json' \
+        --data "{
+          \"channel\": \"#infrastructure\",
+          \"username\": \"GitHub Bot\",
+          \"icon_emoji\": \"$ACTION_EMOJI\",
+          \"text\": \"$ACTION_EMOJI $ACTION_TEXT\",
+          \"attachments\": [{
+            \"color\": \"$ACTION_COLOR\",
+            \"title\": \"📋 PR 정보: ${{ github.event.pull_request.title }}\",
+            \"fields\": [
+              {
+                \"title\": \"👤 작성자\",
+                \"value\": \"${{ github.event.pull_request.user.login }}\",
+                \"short\": true
+              },
+              {
+                \"title\": \"🌿 브랜치\",
+                \"value\": \"${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}\",
+                \"short\": true
+              },
+              {
+                \"title\": \"📝 설명\",
+                \"value\": \"${{ github.event.pull_request.body }}\",
+                \"short\": false
+              },
+              {
+                \"title\": \"🔗 링크\",
+                \"value\": \"<${{ github.event.pull_request.html_url }}|PR 보기>\",
+                \"short\": true
+              }
+            ],
+            \"footer\": \"KDT Project\"
+          }]
+        }" \
+        ${{ secrets.SLACK_WEBHOOK_URL }}
+        
+    - name: 🐛 Issue Notification
+      if: github.event_name == 'issues'
+      run: |
+        ACTION_COLOR="warning"
+        ACTION_EMOJI=":bug:"
+        ACTION_TEXT="새 이슈가 생성되었습니다"
+        
+        if [ "${{ github.event.action }}" = "closed" ]; then
+          ACTION_COLOR="good"
+          ACTION_EMOJI=":white_check_mark:"
+          ACTION_TEXT="이슈가 해결되었습니다"
+        fi
+        
+        curl -X POST -H 'Content-type: application/json' \
+        --data "{
+          \"channel\": \"#infrastructure\",
+          \"username\": \"GitHub Bot\",
+          \"icon_emoji\": \"$ACTION_EMOJI\",
+          \"text\": \"$ACTION_EMOJI $ACTION_TEXT\",
+          \"attachments\": [{
+            \"color\": \"$ACTION_COLOR\",
+            \"title\": \"🐛 이슈: ${{ github.event.issue.title }}\",
+            \"fields\": [
+              {
+                \"title\": \"👤 작성자\",
+                \"value\": \"${{ github.event.issue.user.login }}\",
+                \"short\": true
+              },
+              {
+                \"title\": \"🏷️ 라벨\",
+                \"value\": \"${{ join(github.event.issue.labels.*.name, ', ') }}\",
+                \"short\": true
+              },
+              {
+                \"title\": \"📝 내용\",
+                \"value\": \"${{ github.event.issue.body }}\",
+                \"short\": false
+              },
+              {
+                \"title\": \"🔗 링크\",
+                \"value\": \"<${{ github.event.issue.html_url }}|이슈 보기>\",
+                \"short\": true
+              }
+            ],
+            \"footer\": \"KDT Project\"
+          }]
+        }" \
+        ${{ secrets.SLACK_WEBHOOK_URL }}
+        
+    - name: 🎉 Release Notification
+      if: github.event_name == 'release'
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+        --data '{
+          "channel": "#infrastructure",
+          "username": "GitHub Bot",
+          "icon_emoji": ":tada:",
+          "text": "🎉 새로운 릴리즈가 배포되었습니다!",
+          "attachments": [{
+            "color": "#ff6b35",
+            "title": "🚀 릴리즈: ${{ github.event.release.tag_name }}",
+            "fields": [
+              {
+                "title": "📋 제목",
+                "value": "${{ github.event.release.name }}",
+                "short": true
+              },
+              {
+                "title": "👤 배포자",
+                "value": "${{ github.event.release.author.login }}",
+                "short": true
+              },
+              {
+                "title": "📝 릴리즈 노트",
+                "value": "${{ github.event.release.body }}",
+                "short": false
+              },
+              {
+                "title": "🔗 다운로드",
+                "value": "<${{ github.event.release.html_url }}|릴리즈 보기>",
+                "short": true
+              }
+            ],
+            "footer": "KDT Project"
+          }]
+        }' \
+        ${{ secrets.SLACK_WEBHOOK_URL }}
