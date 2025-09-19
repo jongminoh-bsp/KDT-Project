@@ -47,150 +47,65 @@ jobs:
     - name: 🧠 Q Analysis & Deploy
       run: |
         echo "🤖 Q가 코드 변경사항을 분석하고 배포를 시작합니다..."
-        echo ""
-        echo "📋 변경된 파일들:"
-        echo "${{ steps.changes.outputs.changed_files }}"
-        echo ""
-        echo "💬 커밋 메시지:"
-        echo "${{ steps.changes.outputs.commit_message }}"
-        echo ""
+        echo "📋 변경된 파일들: ${{ steps.changes.outputs.changed_files }}"
+        echo "💬 커밋 메시지: ${{ steps.changes.outputs.commit_message }}"
         
-        # Q CLI 명령어로 자동 분석 및 배포
-        echo "🔍 Q가 Terraform 코드를 분석 중..."
-        
-        # 변경사항 분석
-        if echo "${{ steps.changes.outputs.changed_files }}" | grep -q "infrastructure-spec.yml"; then
-          echo "✅ 인프라 스펙 변경 감지 - 요구사항 업데이트 필요"
+        # 미사용 리소스 스캔 체크
+        if echo "${{ steps.changes.outputs.commit_message }}" | grep -q "미사용 리소스 스캔"; then
+          echo "🔍 미사용 리소스 스캔 실행!"
           
-          # 미사용 리소스 스캔 명령 확인
-          if grep -q "unused_resource_scan:" infra/requirements/infrastructure-spec.yml && grep -q "trigger: true" infra/requirements/infrastructure-spec.yml; then
-            echo "🔍 미사용 리소스 스캔 명령 감지!"
-            echo "📊 AWS 리소스 상태만 조회합니다 (plan/apply 생략)"
-            
-            # 읽기 전용 스캔 실행 및 결과 저장
-            echo "🔄 AWS CLI로 리소스 현황 조회 중..."
-            
-            # EC2 인스턴스 조회
-            echo "📊 EC2 인스턴스 분석 중..."
-            aws ec2 describe-instances --region ap-northeast-2 --query 'Reservations[*].Instances[*].[InstanceId,State.Name,InstanceType,LaunchTime]' --output table > ec2_report.txt || echo "EC2 조회 실패" > ec2_report.txt
-            
-            # EBS 볼륨 조회
-            echo "💾 EBS 볼륨 분석 중..."
-            aws ec2 describe-volumes --region ap-northeast-2 --query 'Volumes[*].[VolumeId,State,Size,Attachments[0].InstanceId//`unattached`]' --output table > ebs_report.txt || echo "EBS 조회 실패" > ebs_report.txt
-            
-            # 보안 그룹 조회
-            echo "🔒 보안 그룹 분석 중..."
-            aws ec2 describe-security-groups --region ap-northeast-2 --query 'SecurityGroups[*].[GroupId,GroupName,Description]' --output table > sg_report.txt || echo "보안 그룹 조회 실패" > sg_report.txt
-            
-            # 최적화 분석 수행
-            echo "🧠 Q가 최적화 방안을 분석 중..."
-            
-            # 미사용 EBS 볼륨 카운트
-            UNATTACHED_VOLUMES=$(grep -c "unattached" ebs_report.txt 2>/dev/null || echo "0")
-            
-            # 실행 중인 EC2 인스턴스 카운트
-            RUNNING_INSTANCES=$(grep -c "running" ec2_report.txt 2>/dev/null || echo "0")
-            
-            # 중지된 EC2 인스턴스 카운트  
-            STOPPED_INSTANCES=$(grep -c "stopped" ec2_report.txt 2>/dev/null || echo "0")
-            
-            # 보안 그룹 총 개수 (헤더 제외)
-            TOTAL_SECURITY_GROUPS=$(tail -n +4 sg_report.txt 2>/dev/null | wc -l || echo "0")
-            
-            # 최적화 리포트 생성
-            echo "📊 최적화 분석 결과:"
-            echo "- 실행 중인 EC2: $RUNNING_INSTANCES개"
-            echo "- 중지된 EC2: $STOPPED_INSTANCES개"
-            echo "- 연결되지 않은 EBS: $UNATTACHED_VOLUMES개"
-            echo "- 보안 그룹: $TOTAL_SECURITY_GROUPS개"
-            COST_SAVINGS=$(($UNATTACHED_VOLUMES * 8 + $STOPPED_INSTANCES * 20))
-            echo "💰 예상 월 절약: \$$COST_SAVINGS"
-            
-            # Slack 메시지 생성 (반드시 생성)
-            echo "📊 AWS 리소스 현황 분석" > slack_message.txt
-            echo "" >> slack_message.txt
-            echo "🖥️ EC2 인스턴스" >> slack_message.txt
-            echo "- 실행 중: ${RUNNING_INSTANCES}개" >> slack_message.txt
-            echo "- 중지됨: ${STOPPED_INSTANCES}개" >> slack_message.txt
-            echo "" >> slack_message.txt
-            echo "💾 EBS 볼륨" >> slack_message.txt
-            echo "- 연결되지 않음: ${UNATTACHED_VOLUMES}개" >> slack_message.txt
-            echo "" >> slack_message.txt
-            echo "🔒 보안 그룹" >> slack_message.txt
-            echo "- 총 개수: ${TOTAL_SECURITY_GROUPS}개" >> slack_message.txt
-            echo "" >> slack_message.txt
-            echo "💰 최적화 제안" >> slack_message.txt
-            echo "- 중지된 EC2 정리: 월 \$$(($STOPPED_INSTANCES * 20)) 절약" >> slack_message.txt
-            echo "- 미사용 EBS 삭제: 월 \$$(($UNATTACHED_VOLUMES * 8)) 절약" >> slack_message.txt
-            echo "- 보안 그룹 정리로 관리 효율성 향상" >> slack_message.txt
-            echo "" >> slack_message.txt
-            echo "📈 예상 효과" >> slack_message.txt
-            echo "- 월 총 절약 비용: \$${COST_SAVINGS}" >> slack_message.txt
-            echo "- 보안 향상: 미사용 규칙 제거" >> slack_message.txt
-            echo "- 관리 효율성: 리소스 정리" >> slack_message.txt
-            
-            echo "📄 Slack 메시지 파일 생성 완료:"
-            ls -la slack_message.txt
-            echo "📄 파일 내용:"
-            cat slack_message.txt
-            
-            echo "✅ 미사용 리소스 스캔 완료! (Terraform 실행 생략)"
-            echo "📊 최적화 리포트 생성 완료"
-            exit 0
-          fi
+          # AWS 리소스 조회
+          echo "📊 EC2 조회 중..."
+          RUNNING_INSTANCES=$(aws ec2 describe-instances --region ap-northeast-2 --query 'Reservations[*].Instances[?State.Name==`running`]' --output json | jq length)
+          STOPPED_INSTANCES=$(aws ec2 describe-instances --region ap-northeast-2 --query 'Reservations[*].Instances[?State.Name==`stopped`]' --output json | jq length)
           
-          # 삭제 명령 확인
-          if grep -q "destroy_all:" infra/requirements/infrastructure-spec.yml && grep -q "trigger: true" infra/requirements/infrastructure-spec.yml; then
-            echo "🗑️ 전체 인프라 삭제 명령 감지!"
-            echo "🔄 Terraform 백엔드 재구성 중..."
-            cd infra/dev/terraform
-            terraform init -reconfigure
-            echo "🚨 Terraform destroy 실행 중..."
-            terraform destroy -auto-approve
-            echo "✅ 전체 인프라 삭제 완료!"
-            exit 0
-          fi
+          echo "💾 EBS 조회 중..."
+          UNATTACHED_VOLUMES=$(aws ec2 describe-volumes --region ap-northeast-2 --query 'Volumes[?State==`available`]' --output json | jq length)
+          
+          echo "🔒 보안 그룹 조회 중..."
+          TOTAL_SECURITY_GROUPS=$(aws ec2 describe-security-groups --region ap-northeast-2 --query 'SecurityGroups' --output json | jq length)
+          
+          # 비용 계산
+          COST_SAVINGS=$(($UNATTACHED_VOLUMES * 8 + $STOPPED_INSTANCES * 20))
+          
+          echo "📊 분석 결과:"
+          echo "- 실행 중 EC2: $RUNNING_INSTANCES개"
+          echo "- 중지된 EC2: $STOPPED_INSTANCES개" 
+          echo "- 미사용 EBS: $UNATTACHED_VOLUMES개"
+          echo "- 보안 그룹: $TOTAL_SECURITY_GROUPS개"
+          echo "- 예상 절약: \$$COST_SAVINGS/월"
+          
+          # Slack 메시지 파일 생성
+          echo "📊 AWS 리소스 현황 분석" > slack_message.txt
+          echo "" >> slack_message.txt
+          echo "🖥️ EC2 인스턴스" >> slack_message.txt
+          echo "- 실행 중: ${RUNNING_INSTANCES}개" >> slack_message.txt
+          echo "- 중지됨: ${STOPPED_INSTANCES}개" >> slack_message.txt
+          echo "" >> slack_message.txt
+          echo "💾 EBS 볼륨" >> slack_message.txt
+          echo "- 미사용: ${UNATTACHED_VOLUMES}개" >> slack_message.txt
+          echo "" >> slack_message.txt
+          echo "🔒 보안 그룹: ${TOTAL_SECURITY_GROUPS}개" >> slack_message.txt
+          echo "" >> slack_message.txt
+          echo "💰 최적화 제안" >> slack_message.txt
+          echo "- 중지된 EC2 정리: 월 \$$(($STOPPED_INSTANCES * 20)) 절약" >> slack_message.txt
+          echo "- 미사용 EBS 삭제: 월 \$$(($UNATTACHED_VOLUMES * 8)) 절약" >> slack_message.txt
+          echo "" >> slack_message.txt
+          echo "📈 총 예상 절약: \$${COST_SAVINGS}/월" >> slack_message.txt
+          
+          echo "✅ slack_message.txt 파일 생성 완료"
+          ls -la slack_message.txt
+          cat slack_message.txt
+          
+          exit 0
         fi
         
-        if echo "${{ steps.changes.outputs.changed_files }}" | grep -q "terraform.tfvars"; then
-          echo "✅ 변수 파일 변경 감지 - 설정 업데이트 필요"
-        fi
-        
-        if echo "${{ steps.changes.outputs.changed_files }}" | grep -q "main.tf"; then
-          echo "✅ 메인 설정 변경 감지 - 리소스 업데이트 필요"
-        fi
-        
-        if echo "${{ steps.changes.outputs.changed_files }}" | grep -q "modules/"; then
-          echo "✅ 모듈 변경 감지 - 모듈 기반 리소스 업데이트 필요"
-        fi
-        
-        # 미사용 리소스 스캔이 아닌 경우에만 Terraform 실행
-        if ! echo "${{ github.event.head_commit.message }}" | grep -q "미사용 리소스 스캔"; then
-          echo ""
-          echo "🚀 Q가 자동으로 Terraform 배포를 실행합니다..."
-          
-          # Terraform 실행
-          cd infra/dev/terraform
-          
-          echo "🔄 Terraform 초기화..."
-          terraform init
-          
-          echo "🔓 기존 락 해제 시도..."
-          # 동적으로 락 상태 확인 후 해제
-          if terraform force-unlock -help > /dev/null 2>&1; then
-            echo "락 해제 기능 사용 가능"
-          fi
-          
-          echo "📋 변경 계획 생성..."
-          terraform plan -out=tfplan
-          
-          echo "🚀 인프라 배포 실행..."
-          terraform apply -auto-approve tfplan
-          
-          echo "✅ Q 자동 배포 완료!"
-        else
-          echo "📊 미사용 리소스 스캔 완료 - Terraform 실행 생략"
-        fi
+        # 일반 배포 로직
+        echo "🚀 일반 Terraform 배포 실행..."
+        cd infra/dev/terraform
+        terraform init
+        terraform plan -out=tfplan
+        terraform apply -auto-approve tfplan
         
     - name: 📊 Generate Q Analysis Report
       if: ${{ !contains(github.event.head_commit.message, '미사용 리소스 스캔') }}
@@ -222,16 +137,9 @@ jobs:
     - name: 🔍 Send Optimization Report to Slack
       if: ${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') }}
       run: |
-        echo "🔍 Slack 전송 단계 시작..."
-        
         if [ -f slack_message.txt ]; then
-          echo "✅ slack_message.txt 파일 존재 확인"
-          echo "📄 파일 내용:"
-          cat slack_message.txt
-          
-          # 파일 내용을 JSON 안전하게 변환
+          echo "✅ 파일 존재 - Slack 전송 중..."
           SLACK_MESSAGE=$(cat slack_message.txt | jq -Rs .)
-          echo "🔗 Slack 전송 중..."
           
           curl -X POST -H 'Content-type: application/json' \
             --data "{
@@ -242,45 +150,24 @@ jobs:
               \"attachments\": [{
                 \"color\": \"#ff9500\",
                 \"title\": \"📊 상세 분석 결과\",
-                \"text\": ${SLACK_MESSAGE},
-                \"fields\": [{
-                  \"title\": \"🎯 분석 범위\",
-                  \"value\": \"EC2, EBS, 보안 그룹\",
-                  \"short\": true
-                }, {
-                  \"title\": \"⏱️ 스캔 시간\",
-                  \"value\": \"1-2분 (AWS CLI)\",
-                  \"short\": true
-                }],
-                \"footer\": \"Amazon Q Cost Optimization\"
+                \"text\": ${SLACK_MESSAGE}
               }]
             }" \
             "${{ secrets.SLACK_WEBHOOK_URL }}"
-          
           echo "✅ Slack 전송 완료"
         else
-          echo "❌ slack_message.txt 파일이 없습니다"
-          echo "📁 현재 디렉토리 파일 목록:"
-          ls -la
-          echo "🔍 대체 메시지 전송..."
-          
+          echo "❌ slack_message.txt 파일 없음"
           curl -X POST -H 'Content-type: application/json' \
             --data '{
               "channel": "#optimization",
               "username": "Amazon Q",
               "icon_emoji": ":warning:",
-              "text": "⚠️ 미사용 리소스 스캔 완료 (상세 결과 파일 없음)",
-              "attachments": [{
-                "color": "warning",
-                "title": "📊 스캔 상태",
-                "text": "AWS CLI를 통한 리소스 스캔이 실행되었으나 결과 파일이 생성되지 않았습니다.",
-                "footer": "Amazon Q Cost Optimization"
-              }]
+              "text": "⚠️ 미사용 리소스 스캔 실행됨 (결과 파일 생성 실패)"
             }' \
             "${{ secrets.SLACK_WEBHOOK_URL }}"
         fi
 
-    - name: 📢 Q Analysis Notification
+    - name: 📢 Deploy Notification
       if: ${{ !contains(github.event.head_commit.message, '미사용 리소스 스캔') }}
       run: |
         curl -X POST -H 'Content-type: application/json' \
@@ -288,33 +175,15 @@ jobs:
           "channel": "#infrastructure",
           "username": "Amazon Q",
           "icon_emoji": ":brain:",
-          "text": "🤖 Q 자동 분석 및 배포 완료",
+          "text": "🤖 Q 자동 배포 완료",
           "attachments": [{
             "color": "good",
             "title": "🚀 인프라 배포 성공",
-            "fields": [
-              {
-                "title": "🧠 분석 방식",
-                "value": "Git 변경사항 자동 감지",
-                "short": true
-              },
-              {
-                "title": "📋 변경 파일",
-                "value": "infrastructure-spec.yml",
-                "short": true
-              },
-              {
-                "title": "💬 커밋",
-                "value": "${{ github.event.head_commit.message }}",
-                "short": false
-              },
-              {
-                "title": "🚀 실행 결과",
-                "value": "✅ 성공적으로 AWS에 배포됨",
-                "short": true
-              }
-            ],
-            "footer": "Amazon Q Auto Analysis System"
+            "fields": [{
+              "title": "💬 커밋",
+              "value": "${{ github.event.head_commit.message }}",
+              "short": false
+            }]
           }]
         }' \
         ${{ secrets.SLACK_WEBHOOK_URL }}
