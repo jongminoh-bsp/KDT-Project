@@ -1,3 +1,6 @@
+# Skyline Infrastructure - Test PR Automation
+# This configuration deploys AWS infrastructure for Skyline application
+
 terraform {
   required_version = ">= 1.0"
   required_providers {
