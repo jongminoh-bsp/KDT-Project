@@ -180,8 +180,7 @@ jobs:
                 "title": "📊 상세 분석 결과",
                 "text": "```\n🔍 감지된 변경사항:\n- 파일: ${{ steps.changes.outputs.changed_files }}\n- 커밋: ${{ github.event.head_commit.id }}\n- 작성자: ${{ github.actor }}\n- 시간: ${{ github.event.head_commit.timestamp }}\n\n🧠 Q 분석:\n- 인프라 스펙 변경 감지\n- Terraform 코드 자동 분석\n- AWS 리소스 상태 확인\n\n🚀 실행된 작업:\n- terraform init (백엔드 초기화)\n- terraform plan (변경 계획 생성)\n- terraform apply (리소스 배포)\n```",
                 "footer": "상세 로그는 GitHub Actions에서 확인하세요",
-                "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-                "ts": ${{ github.event.head_commit.timestamp }}
+                "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
               }
             ]
           }
