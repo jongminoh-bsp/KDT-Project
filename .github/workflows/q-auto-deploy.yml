@@ -234,6 +234,7 @@ jobs:
           }
           
     - name: 💾 Upload Q Analysis Report
+      if: ${{ !contains(github.event.head_commit.message, '미사용 리소스 스캔') }}
       uses: actions/upload-artifact@v4
       with:
         name: q-analysis-report
