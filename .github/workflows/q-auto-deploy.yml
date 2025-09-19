@@ -107,29 +107,27 @@ jobs:
             echo "💰 예상 월 절약: \$$COST_SAVINGS"
             
             # Slack 메시지 생성 (반드시 생성)
-            cat > slack_message.txt << EOF
-📊 AWS 리소스 현황 분석
-
-🖥️ EC2 인스턴스
-- 실행 중: ${RUNNING_INSTANCES}개
-- 중지됨: ${STOPPED_INSTANCES}개
-
-💾 EBS 볼륨
-- 연결되지 않음: ${UNATTACHED_VOLUMES}개
-
-🔒 보안 그룹
-- 총 개수: ${TOTAL_SECURITY_GROUPS}개
-
-💰 최적화 제안
-- 중지된 EC2 정리: 월 \$$(($STOPPED_INSTANCES * 20)) 절약
-- 미사용 EBS 삭제: 월 \$$(($UNATTACHED_VOLUMES * 8)) 절약
-- 보안 그룹 정리로 관리 효율성 향상
-
-📈 예상 효과
-- 월 총 절약 비용: \$${COST_SAVINGS}
-- 보안 향상: 미사용 규칙 제거
-- 관리 효율성: 리소스 정리
-EOF
+            echo "📊 AWS 리소스 현황 분석" > slack_message.txt
+            echo "" >> slack_message.txt
+            echo "🖥️ EC2 인스턴스" >> slack_message.txt
+            echo "- 실행 중: ${RUNNING_INSTANCES}개" >> slack_message.txt
+            echo "- 중지됨: ${STOPPED_INSTANCES}개" >> slack_message.txt
+            echo "" >> slack_message.txt
+            echo "💾 EBS 볼륨" >> slack_message.txt
+            echo "- 연결되지 않음: ${UNATTACHED_VOLUMES}개" >> slack_message.txt
+            echo "" >> slack_message.txt
+            echo "🔒 보안 그룹" >> slack_message.txt
+            echo "- 총 개수: ${TOTAL_SECURITY_GROUPS}개" >> slack_message.txt
+            echo "" >> slack_message.txt
+            echo "💰 최적화 제안" >> slack_message.txt
+            echo "- 중지된 EC2 정리: 월 \$$(($STOPPED_INSTANCES * 20)) 절약" >> slack_message.txt
+            echo "- 미사용 EBS 삭제: 월 \$$(($UNATTACHED_VOLUMES * 8)) 절약" >> slack_message.txt
+            echo "- 보안 그룹 정리로 관리 효율성 향상" >> slack_message.txt
+            echo "" >> slack_message.txt
+            echo "📈 예상 효과" >> slack_message.txt
+            echo "- 월 총 절약 비용: \$${COST_SAVINGS}" >> slack_message.txt
+            echo "- 보안 향상: 미사용 규칙 제거" >> slack_message.txt
+            echo "- 관리 효율성: 리소스 정리" >> slack_message.txt
             
             echo "📄 Slack 메시지 파일 생성 완료:"
             ls -la slack_message.txt
