@@ -98,28 +98,15 @@ jobs:
             TOTAL_SECURITY_GROUPS=$(grep -c "|" sg_report.txt 2>/dev/null || echo "0")
             
             # 최적화 리포트 생성
-            cat > optimization_report.json << EOF
-{
-  "scan_time": "$(date -u +"%Y-%m-%d %H:%M:%S UTC")",
-  "region": "ap-northeast-2",
-  "findings": {
-    "ec2_running": $RUNNING_INSTANCES,
-    "ec2_stopped": $STOPPED_INSTANCES,
-    "ebs_unattached": $UNATTACHED_VOLUMES,
-    "security_groups": $TOTAL_SECURITY_GROUPS
-  },
-  "recommendations": [
-    "💰 중지된 EC2 인스턴스 $STOPPED_INSTANCES개 - 불필요시 종료 권장",
-    "💾 연결되지 않은 EBS 볼륨 $UNATTACHED_VOLUMES개 - 삭제하여 월 \$$(($UNATTACHED_VOLUMES * 8)) 절약 가능",
-    "🔒 보안 그룹 $TOTAL_SECURITY_GROUPS개 - 미사용 그룹 정리 권장",
-    "⚡ 실행 중인 인스턴스 $RUNNING_INSTANCES개 - 사용률 모니터링 필요"
-  ],
-  "cost_impact": "월 예상 절약: \$$(($UNATTACHED_VOLUMES * 8 + $STOPPED_INSTANCES * 20))"
-}
-EOF
+            echo "📊 최적화 분석 결과:"
+            echo "- 실행 중인 EC2: $RUNNING_INSTANCES개"
+            echo "- 중지된 EC2: $STOPPED_INSTANCES개"
+            echo "- 연결되지 않은 EBS: $UNATTACHED_VOLUMES개"
+            echo "- 보안 그룹: $TOTAL_SECURITY_GROUPS개"
+            echo "💰 예상 월 절약: \$$(($UNATTACHED_VOLUMES * 8 + $STOPPED_INSTANCES * 20))"
             
             echo "✅ 미사용 리소스 스캔 완료! (Terraform 실행 생략)"
-            echo "📊 최적화 리포트 생성됨: optimization_report.json"
+            echo "📊 최적화 리포트 생성 완료"
             exit 0
           fi
           
