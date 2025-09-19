@@ -102,30 +102,36 @@ jobs:
           echo "✅ 모듈 변경 감지 - 모듈 기반 리소스 업데이트 필요"
         fi
         
-        echo ""
-        echo "🚀 Q가 자동으로 Terraform 배포를 실행합니다..."
-        
-        # Terraform 실행
-        cd infra/dev/terraform
-        
-        echo "🔄 Terraform 초기화..."
-        terraform init
-        
-        echo "🔓 기존 락 해제 시도..."
-        # 동적으로 락 상태 확인 후 해제
-        if terraform force-unlock -help > /dev/null 2>&1; then
-          echo "락 해제 기능 사용 가능"
+        # 미사용 리소스 스캔이 아닌 경우에만 Terraform 실행
+        if ! echo "${{ github.event.head_commit.message }}" | grep -q "미사용 리소스 스캔"; then
+          echo ""
+          echo "🚀 Q가 자동으로 Terraform 배포를 실행합니다..."
+          
+          # Terraform 실행
+          cd infra/dev/terraform
+          
+          echo "🔄 Terraform 초기화..."
+          terraform init
+          
+          echo "🔓 기존 락 해제 시도..."
+          # 동적으로 락 상태 확인 후 해제
+          if terraform force-unlock -help > /dev/null 2>&1; then
+            echo "락 해제 기능 사용 가능"
+          fi
+          
+          echo "📋 변경 계획 생성..."
+          terraform plan -out=tfplan
+          
+          echo "🚀 인프라 배포 실행..."
+          terraform apply -auto-approve tfplan
+          
+          echo "✅ Q 자동 배포 완료!"
+        else
+          echo "📊 미사용 리소스 스캔 완료 - Terraform 실행 생략"
         fi
         
-        echo "📋 변경 계획 생성..."
-        terraform plan -out=tfplan
-        
-        echo "🚀 인프라 배포 실행..."
-        terraform apply -auto-approve tfplan
-        
-        echo "✅ Q 자동 배포 완료!"
-        
     - name: 📊 Generate Q Analysis Report
+      if: ${{ !contains(github.event.head_commit.message, '미사용 리소스 스캔') }}
       run: |
         cd infra/dev/terraform
         
