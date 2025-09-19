@@ -11,7 +11,7 @@ metadata:
 management:
   unused_resource_scan:
     trigger: true  # 미사용 리소스 스캔해줘
-    timestamp: "2025-09-19T10:57:14"
+    timestamp: "2025-09-19T11:05:54"
 
 # 리소스 최적화 설정
 optimization:
