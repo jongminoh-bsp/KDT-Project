@@ -211,20 +211,29 @@ jobs:
     - name: 🔍 Send Optimization Report to Slack
       if: ${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') }}
       run: |
+        echo "🔍 Slack 전송 단계 시작..."
+        
         if [ -f slack_message.txt ]; then
-          SLACK_MESSAGE=$(cat slack_message.txt)
+          echo "✅ slack_message.txt 파일 존재 확인"
+          echo "📄 파일 내용:"
+          cat slack_message.txt
+          
+          SLACK_MESSAGE=$(cat slack_message.txt | sed 's/"/\\"/g' | tr '\n' '\\n')
+          echo "🔗 Slack 전송 중..."
+          
           curl -X POST -H 'Content-type: application/json' \
-            --data "{
+            --data-raw "{
               \"channel\": \"#optimization\",
               \"username\": \"Amazon Q\",
               \"icon_emoji\": \":mag:\",
+              \"text\": \"🔍 AWS 리소스 최적화 분석 완료\",
               \"attachments\": [{
                 \"color\": \"#ff9500\",
-                \"title\": \"🔍 AWS 리소스 최적화 분석 완료\",
-                \"text\": \"\`\`\`\n$SLACK_MESSAGE\n\`\`\`\",
+                \"title\": \"📊 상세 분석 결과\",
+                \"text\": \"\`\`\`\\n${SLACK_MESSAGE}\\n\`\`\`\",
                 \"fields\": [{
                   \"title\": \"🎯 분석 범위\",
-                  \"value\": \"EC2, EBS, 보안 그룹, 네트워크\",
+                  \"value\": \"EC2, EBS, 보안 그룹\",
                   \"short\": true
                 }, {
                   \"title\": \"⏱️ 스캔 시간\",
@@ -234,7 +243,12 @@ jobs:
                 \"footer\": \"Amazon Q Cost Optimization\"
               }]
             }" \
-            ${{ secrets.SLACK_WEBHOOK_URL }}
+            "${{ secrets.SLACK_WEBHOOK_URL }}"
+          
+          echo "✅ Slack 전송 완료"
+        else
+          echo "❌ slack_message.txt 파일이 없습니다"
+          ls -la
         fi
 
     - name: 📢 Q Analysis Notification
