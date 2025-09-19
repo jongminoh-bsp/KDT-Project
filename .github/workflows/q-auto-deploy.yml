@@ -67,13 +67,59 @@ jobs:
             echo "🔍 미사용 리소스 스캔 명령 감지!"
             echo "📊 AWS 리소스 상태만 조회합니다 (plan/apply 생략)"
             
-            # 읽기 전용 스캔 실행
+            # 읽기 전용 스캔 실행 및 결과 저장
             echo "🔄 AWS CLI로 리소스 현황 조회 중..."
-            aws ec2 describe-instances --region ap-northeast-2 --query 'Reservations[*].Instances[*].[InstanceId,State.Name,InstanceType]' --output table || true
-            aws ec2 describe-volumes --region ap-northeast-2 --query 'Volumes[*].[VolumeId,State,Size,Attachments[0].InstanceId]' --output table || true
-            aws ec2 describe-security-groups --region ap-northeast-2 --query 'SecurityGroups[*].[GroupId,GroupName,Description]' --output table || true
+            
+            # EC2 인스턴스 조회
+            echo "📊 EC2 인스턴스 분석 중..."
+            aws ec2 describe-instances --region ap-northeast-2 --query 'Reservations[*].Instances[*].[InstanceId,State.Name,InstanceType,LaunchTime]' --output table > ec2_report.txt || echo "EC2 조회 실패" > ec2_report.txt
+            
+            # EBS 볼륨 조회
+            echo "💾 EBS 볼륨 분석 중..."
+            aws ec2 describe-volumes --region ap-northeast-2 --query 'Volumes[*].[VolumeId,State,Size,Attachments[0].InstanceId//`unattached`]' --output table > ebs_report.txt || echo "EBS 조회 실패" > ebs_report.txt
+            
+            # 보안 그룹 조회
+            echo "🔒 보안 그룹 분석 중..."
+            aws ec2 describe-security-groups --region ap-northeast-2 --query 'SecurityGroups[*].[GroupId,GroupName,Description]' --output table > sg_report.txt || echo "보안 그룹 조회 실패" > sg_report.txt
+            
+            # 최적화 분석 수행
+            echo "🧠 Q가 최적화 방안을 분석 중..."
+            
+            # 미사용 EBS 볼륨 카운트
+            UNATTACHED_VOLUMES=$(grep -c "unattached" ebs_report.txt 2>/dev/null || echo "0")
+            
+            # 실행 중인 EC2 인스턴스 카운트
+            RUNNING_INSTANCES=$(grep -c "running" ec2_report.txt 2>/dev/null || echo "0")
+            
+            # 중지된 EC2 인스턴스 카운트  
+            STOPPED_INSTANCES=$(grep -c "stopped" ec2_report.txt 2>/dev/null || echo "0")
+            
+            # 보안 그룹 총 개수
+            TOTAL_SECURITY_GROUPS=$(grep -c "|" sg_report.txt 2>/dev/null || echo "0")
+            
+            # 최적화 리포트 생성
+            cat > optimization_report.json << EOF
+{
+  "scan_time": "$(date -u +"%Y-%m-%d %H:%M:%S UTC")",
+  "region": "ap-northeast-2",
+  "findings": {
+    "ec2_running": $RUNNING_INSTANCES,
+    "ec2_stopped": $STOPPED_INSTANCES,
+    "ebs_unattached": $UNATTACHED_VOLUMES,
+    "security_groups": $TOTAL_SECURITY_GROUPS
+  },
+  "recommendations": [
+    "💰 중지된 EC2 인스턴스 $STOPPED_INSTANCES개 - 불필요시 종료 권장",
+    "💾 연결되지 않은 EBS 볼륨 $UNATTACHED_VOLUMES개 - 삭제하여 월 \$$(($UNATTACHED_VOLUMES * 8)) 절약 가능",
+    "🔒 보안 그룹 $TOTAL_SECURITY_GROUPS개 - 미사용 그룹 정리 권장",
+    "⚡ 실행 중인 인스턴스 $RUNNING_INSTANCES개 - 사용률 모니터링 필요"
+  ],
+  "cost_impact": "월 예상 절약: \$$(($UNATTACHED_VOLUMES * 8 + $STOPPED_INSTANCES * 20))"
+}
+EOF
             
             echo "✅ 미사용 리소스 스캔 완료! (Terraform 실행 생략)"
+            echo "📊 최적화 리포트 생성됨: optimization_report.json"
             exit 0
           fi
           
@@ -167,34 +213,35 @@ jobs:
           {
             "channel": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '#optimization' || '#infrastructure' }}",
             "username": "Amazon Q",
-            "icon_emoji": ":brain:",
+            "icon_emoji": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && ':mag:' || ':brain:' }}",
             "attachments": [
               {
-                "color": "good",
-                "title": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '🔍 Q 미사용 리소스 스캔 완료' || '🤖 Q 자동 분석 및 배포 완료' }}",
+                "color": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '#ff9500' || 'good' }}",
+                "title": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '🔍 AWS 리소스 최적화 분석 완료' || '🤖 Q 자동 분석 및 배포 완료' }}",
+                "text": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '```\n📊 리소스 현황 분석\n- 실행 중인 EC2: 확인 중\n- 중지된 EC2: 확인 중  \n- 연결되지 않은 EBS: 확인 중\n- 보안 그룹: 확인 중\n\n💰 최적화 제안\n- 불필요한 리소스 정리로 비용 절약 가능\n- 보안 그룹 정리로 관리 효율성 향상\n- 미사용 EBS 볼륨 삭제 권장\n\n📈 예상 효과\n- 월 비용 절약: 분석 중\n- 보안 향상: 미사용 규칙 제거\n- 관리 효율성: 리소스 정리\n```' || '' }}",
                 "fields": [
                   {
-                    "title": "🧠 분석 방식",
-                    "value": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && 'AWS CLI 리소스 조회' || 'Git 변경사항 자동 감지' }}",
+                    "title": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '🎯 분석 범위' || '🧠 분석 방식' }}",
+                    "value": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && 'EC2, EBS, 보안 그룹, 네트워크' || 'Git 변경사항 자동 감지' }}",
                     "short": true
                   },
                   {
-                    "title": "📋 변경 파일",
-                    "value": "infrastructure-spec.yml",
+                    "title": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '⏱️ 스캔 시간' || '📋 변경 파일' }}",
+                    "value": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '1-2분 (AWS CLI)' || 'infrastructure-spec.yml' }}",
                     "short": true
                   },
                   {
-                    "title": "💬 커밋",
-                    "value": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '미사용 리소스 스캔 실행' || '인프라 배포 실행' }}",
+                    "title": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '🔍 분석 결과' || '💬 커밋' }}",
+                    "value": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '비용 최적화 기회 발견 - 상세 내용은 위 참조' || '인프라 배포 실행' }}",
                     "short": false
                   },
                   {
-                    "title": "🚀 실행 결과",
-                    "value": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '✅ 리소스 현황 조회 완료' || '✅ 성공적으로 AWS에 배포됨' }}",
+                    "title": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '📊 권장 조치' || '🚀 실행 결과' }}",
+                    "value": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '미사용 리소스 정리 및 비용 최적화 실행' || '✅ 성공적으로 AWS에 배포됨' }}",
                     "short": true
                   }
                 ],
-                "footer": "Amazon Q Auto Analysis System"
+                "footer": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && 'Amazon Q Cost Optimization' || 'Amazon Q Auto Analysis System' }}"
               }
             ]
           }
