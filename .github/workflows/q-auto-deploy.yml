@@ -107,9 +107,7 @@ jobs:
             echo "💰 예상 월 절약: \$$COST_SAVINGS"
             
             # Slack 메시지 생성
-            cat > slack_message.txt << 'EOF'
-📊 리소스 현황 분석
-EOF
+            echo "📊 리소스 현황 분석" > slack_message.txt
             echo "- 실행 중인 EC2: ${RUNNING_INSTANCES}개" >> slack_message.txt
             echo "- 중지된 EC2: ${STOPPED_INSTANCES}개" >> slack_message.txt
             echo "- 연결되지 않은 EBS: ${UNATTACHED_VOLUMES}개" >> slack_message.txt
