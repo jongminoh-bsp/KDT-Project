@@ -103,7 +103,15 @@ jobs:
             echo "- 중지된 EC2: $STOPPED_INSTANCES개"
             echo "- 연결되지 않은 EBS: $UNATTACHED_VOLUMES개"
             echo "- 보안 그룹: $TOTAL_SECURITY_GROUPS개"
-            echo "💰 예상 월 절약: \$$(($UNATTACHED_VOLUMES * 8 + $STOPPED_INSTANCES * 20))"
+            COST_SAVINGS=$(($UNATTACHED_VOLUMES * 8 + $STOPPED_INSTANCES * 20))
+            echo "💰 예상 월 절약: \$$COST_SAVINGS"
+            
+            # 환경 변수로 결과 저장 (Slack 알림용)
+            echo "SCAN_EC2_RUNNING=$RUNNING_INSTANCES" >> $GITHUB_ENV
+            echo "SCAN_EC2_STOPPED=$STOPPED_INSTANCES" >> $GITHUB_ENV
+            echo "SCAN_EBS_UNATTACHED=$UNATTACHED_VOLUMES" >> $GITHUB_ENV
+            echo "SCAN_SECURITY_GROUPS=$TOTAL_SECURITY_GROUPS" >> $GITHUB_ENV
+            echo "SCAN_COST_SAVINGS=$COST_SAVINGS" >> $GITHUB_ENV
             
             echo "✅ 미사용 리소스 스캔 완료! (Terraform 실행 생략)"
             echo "📊 최적화 리포트 생성 완료"
@@ -205,7 +213,7 @@ jobs:
               {
                 "color": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '#ff9500' || 'good' }}",
                 "title": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '🔍 AWS 리소스 최적화 분석 완료' || '🤖 Q 자동 분석 및 배포 완료' }}",
-                "text": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '```\n📊 리소스 현황 분석\n- 실행 중인 EC2: 확인 중\n- 중지된 EC2: 확인 중  \n- 연결되지 않은 EBS: 확인 중\n- 보안 그룹: 확인 중\n\n💰 최적화 제안\n- 불필요한 리소스 정리로 비용 절약 가능\n- 보안 그룹 정리로 관리 효율성 향상\n- 미사용 EBS 볼륨 삭제 권장\n\n📈 예상 효과\n- 월 비용 절약: 분석 중\n- 보안 향상: 미사용 규칙 제거\n- 관리 효율성: 리소스 정리\n```' || '' }}",
+                "text": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '```\n📊 리소스 현황 분석\n- 실행 중인 EC2: ${{ env.SCAN_EC2_RUNNING }}개\n- 중지된 EC2: ${{ env.SCAN_EC2_STOPPED }}개\n- 연결되지 않은 EBS: ${{ env.SCAN_EBS_UNATTACHED }}개\n- 보안 그룹: ${{ env.SCAN_SECURITY_GROUPS }}개\n\n💰 최적화 제안\n- 중지된 EC2 ${{ env.SCAN_EC2_STOPPED }}개 정리로 월 ${{ env.SCAN_EC2_STOPPED * 20 }} 절약\n- 미사용 EBS ${{ env.SCAN_EBS_UNATTACHED }}개 삭제로 월 ${{ env.SCAN_EBS_UNATTACHED * 8 }} 절약\n- 보안 그룹 정리로 관리 효율성 향상\n\n📈 예상 효과\n- 월 총 절약: ${{ env.SCAN_COST_SAVINGS }}\n- 보안 향상: 미사용 규칙 제거\n- 관리 효율성: 리소스 정리\n```' || '' }}",
                 "fields": [
                   {
                     "title": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '🎯 분석 범위' || '🧠 분석 방식' }}",
