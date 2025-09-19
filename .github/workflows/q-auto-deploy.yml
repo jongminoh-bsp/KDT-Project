@@ -106,12 +106,24 @@ jobs:
             COST_SAVINGS=$(($UNATTACHED_VOLUMES * 8 + $STOPPED_INSTANCES * 20))
             echo "💰 예상 월 절약: \$$COST_SAVINGS"
             
-            # 환경 변수로 결과 저장 (Slack 알림용)
-            echo "SCAN_EC2_RUNNING=$RUNNING_INSTANCES" >> $GITHUB_ENV
-            echo "SCAN_EC2_STOPPED=$STOPPED_INSTANCES" >> $GITHUB_ENV
-            echo "SCAN_EBS_UNATTACHED=$UNATTACHED_VOLUMES" >> $GITHUB_ENV
-            echo "SCAN_SECURITY_GROUPS=$TOTAL_SECURITY_GROUPS" >> $GITHUB_ENV
-            echo "SCAN_COST_SAVINGS=$COST_SAVINGS" >> $GITHUB_ENV
+            # Slack 메시지 생성
+            cat > slack_message.txt << 'EOF'
+📊 리소스 현황 분석
+EOF
+            echo "- 실행 중인 EC2: ${RUNNING_INSTANCES}개" >> slack_message.txt
+            echo "- 중지된 EC2: ${STOPPED_INSTANCES}개" >> slack_message.txt
+            echo "- 연결되지 않은 EBS: ${UNATTACHED_VOLUMES}개" >> slack_message.txt
+            echo "- 보안 그룹: ${TOTAL_SECURITY_GROUPS}개" >> slack_message.txt
+            echo "" >> slack_message.txt
+            echo "💰 최적화 제안" >> slack_message.txt
+            echo "- 중지된 EC2 ${STOPPED_INSTANCES}개 정리로 월 \$$(($STOPPED_INSTANCES * 20)) 절약" >> slack_message.txt
+            echo "- 미사용 EBS ${UNATTACHED_VOLUMES}개 삭제로 월 \$$(($UNATTACHED_VOLUMES * 8)) 절약" >> slack_message.txt
+            echo "- 보안 그룹 정리로 관리 효율성 향상" >> slack_message.txt
+            echo "" >> slack_message.txt
+            echo "📈 예상 효과" >> slack_message.txt
+            echo "- 월 총 절약: \$${COST_SAVINGS}" >> slack_message.txt
+            echo "- 보안 향상: 미사용 규칙 제거" >> slack_message.txt
+            echo "- 관리 효율성: 리소스 정리" >> slack_message.txt
             
             echo "✅ 미사용 리소스 스캔 완료! (Terraform 실행 생략)"
             echo "📊 최적화 리포트 생성 완료"
@@ -198,7 +210,37 @@ jobs:
         echo "## 🏗️ 배포된 리소스" >> q-analysis-report.md
         terraform show -json | jq -r '.values.root_module.resources[] | "- \(.type): \(.name)"' >> q-analysis-report.md || echo "- 리소스 목록 생성 실패" >> q-analysis-report.md
         
+    - name: 🔍 Send Optimization Report to Slack
+      if: ${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') }}
+      run: |
+        if [ -f slack_message.txt ]; then
+          SLACK_MESSAGE=$(cat slack_message.txt)
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"channel\": \"#optimization\",
+              \"username\": \"Amazon Q\",
+              \"icon_emoji\": \":mag:\",
+              \"attachments\": [{
+                \"color\": \"#ff9500\",
+                \"title\": \"🔍 AWS 리소스 최적화 분석 완료\",
+                \"text\": \"\`\`\`\n$SLACK_MESSAGE\n\`\`\`\",
+                \"fields\": [{
+                  \"title\": \"🎯 분석 범위\",
+                  \"value\": \"EC2, EBS, 보안 그룹, 네트워크\",
+                  \"short\": true
+                }, {
+                  \"title\": \"⏱️ 스캔 시간\",
+                  \"value\": \"1-2분 (AWS CLI)\",
+                  \"short\": true
+                }],
+                \"footer\": \"Amazon Q Cost Optimization\"
+              }]
+            }" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+        fi
+
     - name: 📢 Q Analysis Notification
+      if: ${{ !contains(github.event.head_commit.message, '미사용 리소스 스캔') }}
       uses: 8398a7/action-slack@v3
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
