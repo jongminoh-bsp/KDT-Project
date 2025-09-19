@@ -223,11 +223,12 @@ jobs:
           echo "📄 파일 내용:"
           cat slack_message.txt
           
-          SLACK_MESSAGE=$(cat slack_message.txt | sed 's/"/\\"/g' | tr '\n' '\\n')
+          # 파일 내용을 JSON 안전하게 변환
+          SLACK_MESSAGE=$(cat slack_message.txt | jq -Rs .)
           echo "🔗 Slack 전송 중..."
           
           curl -X POST -H 'Content-type: application/json' \
-            --data-raw "{
+            --data "{
               \"channel\": \"#optimization\",
               \"username\": \"Amazon Q\",
               \"icon_emoji\": \":mag:\",
@@ -235,7 +236,7 @@ jobs:
               \"attachments\": [{
                 \"color\": \"#ff9500\",
                 \"title\": \"📊 상세 분석 결과\",
-                \"text\": \"\`\`\`\\n${SLACK_MESSAGE}\\n\`\`\`\",
+                \"text\": ${SLACK_MESSAGE},
                 \"fields\": [{
                   \"title\": \"🎯 분석 범위\",
                   \"value\": \"EC2, EBS, 보안 그룹\",
@@ -253,52 +254,64 @@ jobs:
           echo "✅ Slack 전송 완료"
         else
           echo "❌ slack_message.txt 파일이 없습니다"
+          echo "📁 현재 디렉토리 파일 목록:"
           ls -la
+          echo "🔍 대체 메시지 전송..."
+          
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "channel": "#optimization",
+              "username": "Amazon Q",
+              "icon_emoji": ":warning:",
+              "text": "⚠️ 미사용 리소스 스캔 완료 (상세 결과 파일 없음)",
+              "attachments": [{
+                "color": "warning",
+                "title": "📊 스캔 상태",
+                "text": "AWS CLI를 통한 리소스 스캔이 실행되었으나 결과 파일이 생성되지 않았습니다.",
+                "footer": "Amazon Q Cost Optimization"
+              }]
+            }' \
+            "${{ secrets.SLACK_WEBHOOK_URL }}"
         fi
 
     - name: 📢 Q Analysis Notification
       if: ${{ !contains(github.event.head_commit.message, '미사용 리소스 스캔') }}
-      uses: 8398a7/action-slack@v3
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-      with:
-        status: custom
-        custom_payload: |
-          {
-            "channel": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '#optimization' || '#infrastructure' }}",
-            "username": "Amazon Q",
-            "icon_emoji": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && ':mag:' || ':brain:' }}",
-            "attachments": [
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+        --data '{
+          "channel": "#infrastructure",
+          "username": "Amazon Q",
+          "icon_emoji": ":brain:",
+          "text": "🤖 Q 자동 분석 및 배포 완료",
+          "attachments": [{
+            "color": "good",
+            "title": "🚀 인프라 배포 성공",
+            "fields": [
               {
-                "color": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '#ff9500' || 'good' }}",
-                "title": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '🔍 AWS 리소스 최적화 분석 완료' || '🤖 Q 자동 분석 및 배포 완료' }}",
-                "text": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '```\n📊 리소스 현황 분석\n- 실행 중인 EC2: ${{ env.SCAN_EC2_RUNNING }}개\n- 중지된 EC2: ${{ env.SCAN_EC2_STOPPED }}개\n- 연결되지 않은 EBS: ${{ env.SCAN_EBS_UNATTACHED }}개\n- 보안 그룹: ${{ env.SCAN_SECURITY_GROUPS }}개\n\n💰 최적화 제안\n- 중지된 EC2 ${{ env.SCAN_EC2_STOPPED }}개 정리로 월 ${{ env.SCAN_EC2_STOPPED * 20 }} 절약\n- 미사용 EBS ${{ env.SCAN_EBS_UNATTACHED }}개 삭제로 월 ${{ env.SCAN_EBS_UNATTACHED * 8 }} 절약\n- 보안 그룹 정리로 관리 효율성 향상\n\n📈 예상 효과\n- 월 총 절약: ${{ env.SCAN_COST_SAVINGS }}\n- 보안 향상: 미사용 규칙 제거\n- 관리 효율성: 리소스 정리\n```' || '' }}",
-                "fields": [
-                  {
-                    "title": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '🎯 분석 범위' || '🧠 분석 방식' }}",
-                    "value": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && 'EC2, EBS, 보안 그룹, 네트워크' || 'Git 변경사항 자동 감지' }}",
-                    "short": true
-                  },
-                  {
-                    "title": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '⏱️ 스캔 시간' || '📋 변경 파일' }}",
-                    "value": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '1-2분 (AWS CLI)' || 'infrastructure-spec.yml' }}",
-                    "short": true
-                  },
-                  {
-                    "title": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '🔍 분석 결과' || '💬 커밋' }}",
-                    "value": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '비용 최적화 기회 발견 - 상세 내용은 위 참조' || '인프라 배포 실행' }}",
-                    "short": false
-                  },
-                  {
-                    "title": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '📊 권장 조치' || '🚀 실행 결과' }}",
-                    "value": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && '미사용 리소스 정리 및 비용 최적화 실행' || '✅ 성공적으로 AWS에 배포됨' }}",
-                    "short": true
-                  }
-                ],
-                "footer": "${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') && 'Amazon Q Cost Optimization' || 'Amazon Q Auto Analysis System' }}"
+                "title": "🧠 분석 방식",
+                "value": "Git 변경사항 자동 감지",
+                "short": true
+              },
+              {
+                "title": "📋 변경 파일",
+                "value": "infrastructure-spec.yml",
+                "short": true
+              },
+              {
+                "title": "💬 커밋",
+                "value": "${{ github.event.head_commit.message }}",
+                "short": false
+              },
+              {
+                "title": "🚀 실행 결과",
+                "value": "✅ 성공적으로 AWS에 배포됨",
+                "short": true
               }
-            ]
-          }
+            ],
+            "footer": "Amazon Q Auto Analysis System"
+          }]
+        }' \
+        ${{ secrets.SLACK_WEBHOOK_URL }}
           
     - name: 💾 Upload Q Analysis Report
       if: ${{ !contains(github.event.head_commit.message, '미사용 리소스 스캔') }}
