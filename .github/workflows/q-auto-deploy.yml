@@ -65,6 +65,27 @@ jobs:
           echo "🔒 보안 그룹 조회 중..."
           TOTAL_SECURITY_GROUPS=$(aws ec2 describe-security-groups --region ap-northeast-2 --query 'SecurityGroups' --output json | jq length)
           
+          # 상세 리소스 현황 조회
+          echo "🌐 VPC 조회 중..."
+          VPC_COUNT=$(aws ec2 describe-vpcs --region ap-northeast-2 --query 'Vpcs' --output json | jq length)
+          SUBNET_COUNT=$(aws ec2 describe-subnets --region ap-northeast-2 --query 'Subnets' --output json | jq length)
+          
+          echo "🗄️ RDS 조회 중..."
+          RDS_COUNT=$(aws rds describe-db-instances --region ap-northeast-2 --query 'DBInstances' --output json | jq length)
+          
+          echo "☸️ EKS 조회 중..."
+          EKS_COUNT=$(aws eks list-clusters --region ap-northeast-2 --query 'clusters' --output json | jq length)
+          
+          echo "👤 IAM 사용자 조회 중..."
+          IAM_USERS=$(aws iam list-users --query 'Users[].UserName' --output json | jq -r '.[]' | head -10 | tr '\n' ', ' | sed 's/,$//')
+          
+          # 상세 리소스 목록 생성
+          echo "📋 EC2 인스턴스 목록 생성 중..."
+          EC2_DETAILS=$(aws ec2 describe-instances --region ap-northeast-2 --query 'Reservations[*].Instances[*].[InstanceId,State.Name,InstanceType,Tags[?Key==`Name`].Value|[0]]' --output table | head -20)
+          
+          echo "🌐 VPC 목록 생성 중..."
+          VPC_DETAILS=$(aws ec2 describe-vpcs --region ap-northeast-2 --query 'Vpcs[*].[VpcId,CidrBlock,State,Tags[?Key==`Name`].Value|[0]]' --output table)
+          
           # 비용 계산
           COST_SAVINGS=$(($UNATTACHED_VOLUMES * 8 + $STOPPED_INSTANCES * 20))
           
@@ -73,9 +94,13 @@ jobs:
           echo "- 중지된 EC2: $STOPPED_INSTANCES개" 
           echo "- 미사용 EBS: $UNATTACHED_VOLUMES개"
           echo "- 보안 그룹: $TOTAL_SECURITY_GROUPS개"
+          echo "- VPC: $VPC_COUNT개"
+          echo "- Subnet: $SUBNET_COUNT개"
+          echo "- RDS: $RDS_COUNT개"
+          echo "- EKS: $EKS_COUNT개"
           echo "- 예상 절약: \$$COST_SAVINGS/월"
           
-          # Slack 메시지 파일 생성
+          # 기본 Slack 메시지 파일 생성
           echo "📊 AWS 리소스 현황 분석" > slack_message.txt
           echo "" >> slack_message.txt
           echo "🖥️ EC2 인스턴스" >> slack_message.txt
@@ -93,9 +118,31 @@ jobs:
           echo "" >> slack_message.txt
           echo "📈 총 예상 절약: \$${COST_SAVINGS}/월" >> slack_message.txt
           
+          # 상세 리소스 현황 파일 생성
+          echo "🌐 전체 AWS 리소스 현황" > detailed_resources.txt
+          echo "================================" >> detailed_resources.txt
+          echo "" >> detailed_resources.txt
+          echo "📊 리소스 요약" >> detailed_resources.txt
+          echo "- EC2 인스턴스: 실행중 ${RUNNING_INSTANCES}개, 중지됨 ${STOPPED_INSTANCES}개" >> detailed_resources.txt
+          echo "- EBS 볼륨: 미사용 ${UNATTACHED_VOLUMES}개" >> detailed_resources.txt
+          echo "- VPC: ${VPC_COUNT}개" >> detailed_resources.txt
+          echo "- Subnet: ${SUBNET_COUNT}개" >> detailed_resources.txt
+          echo "- RDS: ${RDS_COUNT}개" >> detailed_resources.txt
+          echo "- EKS 클러스터: ${EKS_COUNT}개" >> detailed_resources.txt
+          echo "- 보안 그룹: ${TOTAL_SECURITY_GROUPS}개" >> detailed_resources.txt
+          echo "" >> detailed_resources.txt
+          echo "👤 IAM 사용자 (최대 10개)" >> detailed_resources.txt
+          echo "${IAM_USERS}" >> detailed_resources.txt
+          echo "" >> detailed_resources.txt
+          echo "🖥️ EC2 인스턴스 상세" >> detailed_resources.txt
+          echo "${EC2_DETAILS}" >> detailed_resources.txt
+          echo "" >> detailed_resources.txt
+          echo "🌐 VPC 상세" >> detailed_resources.txt
+          echo "${VPC_DETAILS}" >> detailed_resources.txt
+          
           echo "✅ slack_message.txt 파일 생성 완료"
-          ls -la slack_message.txt
-          cat slack_message.txt
+          echo "✅ detailed_resources.txt 파일 생성 완료"
+          ls -la slack_message.txt detailed_resources.txt
           
           exit 0
         fi
@@ -137,9 +184,10 @@ jobs:
     - name: 🔍 Send Optimization Report to Slack
       if: ${{ contains(github.event.head_commit.message, '미사용 리소스 스캔') }}
       run: |
-        if [ -f slack_message.txt ]; then
+        if [ -f slack_message.txt ] && [ -f detailed_resources.txt ]; then
           echo "✅ 파일 존재 - Slack 전송 중..."
           SLACK_MESSAGE=$(cat slack_message.txt | jq -Rs .)
+          DETAILED_MESSAGE=$(cat detailed_resources.txt | jq -Rs .)
           
           curl -X POST -H 'Content-type: application/json' \
             --data "{
@@ -149,14 +197,37 @@ jobs:
               \"text\": \"🔍 AWS 리소스 최적화 분석 완료\",
               \"attachments\": [{
                 \"color\": \"#ff9500\",
-                \"title\": \"📊 상세 분석 결과\",
-                \"text\": ${SLACK_MESSAGE}
+                \"title\": \"📊 리소스 현황 요약\",
+                \"text\": ${SLACK_MESSAGE},
+                \"fields\": [
+                  {
+                    \"title\": \"🎯 분석 범위\",
+                    \"value\": \"EC2, EBS, VPC, RDS, EKS, IAM\",
+                    \"short\": true
+                  },
+                  {
+                    \"title\": \"⏱️ 스캔 시간\",
+                    \"value\": \"$(date '+%Y-%m-%d %H:%M')\",
+                    \"short\": true
+                  }
+                ],
+                \"actions\": [{
+                  \"type\": \"button\",
+                  \"text\": \"📋 자세히 보기\",
+                  \"style\": \"primary\",
+                  \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+                }]
+              }, {
+                \"color\": \"#36a64f\",
+                \"title\": \"🌐 전체 AWS 리소스 상세 현황\",
+                \"text\": ${DETAILED_MESSAGE},
+                \"footer\": \"Amazon Q Cost Optimization\"
               }]
             }" \
             "${{ secrets.SLACK_WEBHOOK_URL }}"
           echo "✅ Slack 전송 완료"
         else
-          echo "❌ slack_message.txt 파일 없음"
+          echo "❌ 파일 없음"
           curl -X POST -H 'Content-type: application/json' \
             --data '{
               "channel": "#optimization",
