@@ -1,0 +1,157 @@
+name: 🤖 Slack Bot API
+
+on:
+  repository_dispatch:
+    types: [slack-command]
+
+env:
+  AWS_REGION: 'ap-northeast-2'
+
+jobs:
+  slack-bot:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+      
+    - name: 🔐 Configure AWS
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: 🤖 Process Slack Command
+      run: |
+        COMMAND="${{ github.event.client_payload.command }}"
+        CHANNEL="${{ github.event.client_payload.channel }}"
+        USER="${{ github.event.client_payload.user }}"
+        
+        echo "📝 받은 명령: $COMMAND"
+        echo "📱 채널: $CHANNEL"
+        echo "👤 사용자: $USER"
+        
+        # 실시간 응답 시작
+        curl -X POST -H 'Content-type: application/json' \
+        --data "{
+          \"channel\": \"$CHANNEL\",
+          \"username\": \"Amazon Q\",
+          \"icon_emoji\": \":robot_face:\",
+          \"text\": \"🤖 $USER님의 요청을 처리 중입니다... \`$COMMAND\`\"
+        }" \
+        "${{ secrets.SLACK_WEBHOOK_URL }}"
+        
+        case "$COMMAND" in
+          *"리소스 현황"*|*"resource status"*)
+            echo "📊 AWS 리소스 현황 조회 중..."
+            
+            # 리소스 조회
+            EC2_RUNNING=$(aws ec2 describe-instances --region ap-northeast-2 --query 'Reservations[*].Instances[?State.Name==`running`]' --output json | jq length)
+            EC2_STOPPED=$(aws ec2 describe-instances --region ap-northeast-2 --query 'Reservations[*].Instances[?State.Name==`stopped`]' --output json | jq length)
+            EBS_UNATTACHED=$(aws ec2 describe-volumes --region ap-northeast-2 --query 'Volumes[?State==`available`]' --output json | jq length)
+            VPC_COUNT=$(aws ec2 describe-vpcs --region ap-northeast-2 --query 'Vpcs' --output json | jq length)
+            RDS_COUNT=$(aws rds describe-db-instances --region ap-northeast-2 --query 'DBInstances' --output json | jq length)
+            EKS_COUNT=$(aws eks list-clusters --region ap-northeast-2 --query 'clusters' --output json | jq length)
+            
+            curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"channel\": \"$CHANNEL\",
+              \"username\": \"Amazon Q\",
+              \"icon_emoji\": \":bar_chart:\",
+              \"text\": \"📊 실시간 AWS 리소스 현황\",
+              \"attachments\": [{
+                \"color\": \"good\",
+                \"fields\": [
+                  {\"title\": \"🖥️ EC2 실행중\", \"value\": \"${EC2_RUNNING}개\", \"short\": true},
+                  {\"title\": \"⏹️ EC2 중지됨\", \"value\": \"${EC2_STOPPED}개\", \"short\": true},
+                  {\"title\": \"💾 미사용 EBS\", \"value\": \"${EBS_UNATTACHED}개\", \"short\": true},
+                  {\"title\": \"🌐 VPC\", \"value\": \"${VPC_COUNT}개\", \"short\": true},
+                  {\"title\": \"🗄️ RDS\", \"value\": \"${RDS_COUNT}개\", \"short\": true},
+                  {\"title\": \"☸️ EKS\", \"value\": \"${EKS_COUNT}개\", \"short\": true}
+                ]
+              }]
+            }" \
+            "${{ secrets.SLACK_WEBHOOK_URL }}"
+            ;;
+            
+          *"비용 분석"*|*"cost analysis"*)
+            echo "💰 비용 분석 중..."
+            
+            EC2_STOPPED=$(aws ec2 describe-instances --region ap-northeast-2 --query 'Reservations[*].Instances[?State.Name==`stopped`]' --output json | jq length)
+            EBS_UNATTACHED=$(aws ec2 describe-volumes --region ap-northeast-2 --query 'Volumes[?State==`available`]' --output json | jq length)
+            COST_SAVINGS=$(($EBS_UNATTACHED * 8 + $EC2_STOPPED * 20))
+            
+            curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"channel\": \"$CHANNEL\",
+              \"username\": \"Amazon Q\",
+              \"icon_emoji\": \":moneybag:\",
+              \"text\": \"💰 실시간 비용 최적화 분석\",
+              \"attachments\": [{
+                \"color\": \"warning\",
+                \"fields\": [
+                  {\"title\": \"⏹️ 중지된 EC2\", \"value\": \"${EC2_STOPPED}개 → 월 \$$(($EC2_STOPPED * 20)) 절약 가능\", \"short\": false},
+                  {\"title\": \"💾 미사용 EBS\", \"value\": \"${EBS_UNATTACHED}개 → 월 \$$(($EBS_UNATTACHED * 8)) 절약 가능\", \"short\": false},
+                  {\"title\": \"💵 총 절약 가능\", \"value\": \"월 \$${COST_SAVINGS}\", \"short\": true}
+                ]
+              }]
+            }" \
+            "${{ secrets.SLACK_WEBHOOK_URL }}"
+            ;;
+            
+          *"보안 점검"*|*"security check"*)
+            echo "🔒 보안 점검 중..."
+            
+            SG_COUNT=$(aws ec2 describe-security-groups --region ap-northeast-2 --query 'SecurityGroups' --output json | jq length)
+            OPEN_SG=$(aws ec2 describe-security-groups --region ap-northeast-2 --query 'SecurityGroups[?IpPermissions[?IpRanges[?CidrIp==`0.0.0.0/0`]]]' --output json | jq length)
+            IAM_USERS=$(aws iam list-users --query 'Users' --output json | jq length)
+            
+            curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"channel\": \"$CHANNEL\",
+              \"username\": \"Amazon Q\",
+              \"icon_emoji\": \":shield:\",
+              \"text\": \"🔒 실시간 보안 점검 결과\",
+              \"attachments\": [{
+                \"color\": \"${OPEN_SG -gt 0 && 'danger' || 'good'}\",
+                \"fields\": [
+                  {\"title\": \"🔒 보안 그룹\", \"value\": \"${SG_COUNT}개\", \"short\": true},
+                  {\"title\": \"⚠️ 전체 오픈 SG\", \"value\": \"${OPEN_SG}개\", \"short\": true},
+                  {\"title\": \"👤 IAM 사용자\", \"value\": \"${IAM_USERS}개\", \"short\": true}
+                ]
+              }]
+            }" \
+            "${{ secrets.SLACK_WEBHOOK_URL }}"
+            ;;
+            
+          *"도움말"*|*"help"*)
+            curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"channel\": \"$CHANNEL\",
+              \"username\": \"Amazon Q\",
+              \"icon_emoji\": \":question:\",
+              \"text\": \"🤖 Amazon Q 사용 가능한 명령어\",
+              \"attachments\": [{
+                \"color\": \"#36a64f\",
+                \"fields\": [
+                  {\"title\": \"📊 리소스 현황\", \"value\": \"AWS 리소스 실시간 조회\", \"short\": true},
+                  {\"title\": \"💰 비용 분석\", \"value\": \"비용 최적화 분석\", \"short\": true},
+                  {\"title\": \"🔒 보안 점검\", \"value\": \"보안 상태 점검\", \"short\": true},
+                  {\"title\": \"🆘 도움말\", \"value\": \"이 메시지 표시\", \"short\": true}
+                ]
+              }]
+            }" \
+            "${{ secrets.SLACK_WEBHOOK_URL }}"
+            ;;
+            
+          *)
+            curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"channel\": \"$CHANNEL\",
+              \"username\": \"Amazon Q\",
+              \"icon_emoji\": \":thinking_face:\",
+              \"text\": \"🤔 죄송해요, '\`$COMMAND\`' 명령을 이해하지 못했어요. \`도움말\`을 입력해보세요!\"
+            }" \
+            "${{ secrets.SLACK_WEBHOOK_URL }}"
+            ;;
+        esac
