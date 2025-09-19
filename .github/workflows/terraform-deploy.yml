@@ -1,334 +1,157 @@
-name: 🚀 Terraform Infrastructure Deployment
+name: Terraform Infrastructure Deploy
 
 on:
-  # push:  # Q Auto Deploy 시스템으로 완전 대체됨
-  #   branches: [ develop ]
-  #   paths:
-  #     - 'infra/**'
   pull_request:
-    branches: [ main, develop ]
-    paths:
-      - 'infra/**'
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Target environment'
-        required: true
-        default: 'dev'
-        type: choice
-        options:
-        - dev
-        - staging
-        - prod
-      action:
-        description: 'Terraform action'
-        required: true
-        default: 'plan'
-        type: choice
-        options:
-        - plan
-        - apply
-        - destroy
-      change_summary:
-        description: 'Summary of infrastructure changes'
-        required: false
-        type: string
+    branches: [main]
+    paths: ['test/skyline-infrastructure/**']
+    types: [opened, synchronize, reopened]
+  
+  push:
+    branches: [main]
+    paths: ['test/skyline-infrastructure/**']
 
 env:
-  TF_VERSION: '1.9.8'
-  AWS_REGION: 'ap-northeast-2'
+  TF_VAR_aws_region: ap-northeast-2
+  TF_VAR_project_name: skyline
+  TF_VAR_environment: dev
 
 jobs:
-  terraform-check:
-    name: 🔍 Terraform Validation
+  terraform-plan:
+    name: Terraform Plan
     runs-on: ubuntu-latest
-    outputs:
-      tf-changes: ${{ steps.changes.outputs.terraform }}
+    if: github.event_name == 'pull_request'
     
     steps:
-    - name: 📥 Checkout Code
+    - name: Checkout
       uses: actions/checkout@v4
-      
-    - name: 🔍 Detect Changes
-      uses: dorny/paths-filter@v2
-      id: changes
-      with:
-        filters: |
-          terraform:
-            - 'infra/**/*.tf'
-            - 'infra/**/*.tfvars'
-            
-    - name: ⚙️ Setup Terraform
-      if: steps.changes.outputs.terraform == 'true'
+
+    - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
-        terraform_version: ${{ env.TF_VERSION }}
-        
-    - name: 🎨 Terraform Format Check & Auto-fix
-      if: steps.changes.outputs.terraform == 'true'
-      run: |
-        cd infra/dev/terraform
-        
-        # 포맷 체크 및 자동 수정
-        if ! terraform fmt -check -recursive; then
-          echo "⚠️ Terraform files need formatting. Auto-fixing..."
-          terraform fmt -recursive
-          echo "🔧 Terraform files have been formatted"
-          echo "::notice::Terraform files were automatically formatted"
-        else
-          echo "✅ All Terraform files are properly formatted"
-        fi
-        
-    - name: ✅ Terraform Validate
-      if: steps.changes.outputs.terraform == 'true'
-      run: |
-        cd infra/dev/terraform
-        terraform init -backend=false
-        terraform validate
+        terraform_version: 1.6.0
 
-  terraform-plan:
-    name: 📋 Terraform Plan
-    runs-on: ubuntu-latest
-    needs: terraform-check
-    if: needs.terraform-check.outputs.tf-changes == 'true'
-    environment: 
-      name: ${{ github.event.inputs.environment || 'dev' }}
-    
-    steps:
-    - name: 📥 Checkout Code
-      uses: actions/checkout@v4
-      
-    - name: 🔐 Configure AWS Credentials
+    - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-        
-    - name: ⚙️ Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: ${{ env.TF_VERSION }}
-        
-    - name: 🚀 Terraform Init
+        aws-region: ap-northeast-2
+
+    - name: Terraform Init
       run: |
-        cd infra/dev/terraform
+        cd test/skyline-infrastructure
         terraform init
-        
-    - name: 📋 Terraform Plan
+
+    - name: Terraform Plan
       id: plan
       run: |
-        cd infra/dev/terraform
+        cd test/skyline-infrastructure
         terraform plan -no-color -out=tfplan
-        terraform show -no-color tfplan > plan.txt
-        
-    - name: 📝 Comment Plan on PR
-      if: github.event_name == 'pull_request'
+      continue-on-error: true
+
+    - name: Comment PR with Plan
       uses: actions/github-script@v7
       with:
         script: |
           const fs = require('fs');
-          const plan = fs.readFileSync('infra/dev/terraform/plan.txt', 'utf8');
-          const maxLength = 65000;
-          const truncatedPlan = plan.length > maxLength ? 
-            plan.substring(0, maxLength) + '\n... (truncated)' : plan;
+          const { execSync } = require('child_process');
           
-          const output = `## 🚀 Terraform Plan Results
+          // Get plan output
+          const planOutput = execSync('cd test/skyline-infrastructure && terraform show -no-color tfplan', { encoding: 'utf8' });
           
-          <details>
-          <summary>📋 Click to expand plan</summary>
+          const comment = `## 🏗️ Terraform Plan Results
           
-          \`\`\`terraform
-          ${truncatedPlan}
+          ### 📊 Plan Summary
+          \`\`\`
+          ${planOutput.slice(0, 2000)}${planOutput.length > 2000 ? '\n... (truncated)' : ''}
           \`\`\`
           
-          </details>
+          ### 🔍 Review Checklist
+          - [ ] 리소스 생성/변경 내용 확인
+          - [ ] 비용 영향도 검토
+          - [ ] 보안 설정 검증
+          - [ ] 태그 정책 준수 확인
           
-          **Environment**: \`${{ github.event.inputs.environment || 'dev' }}\`
-          **Triggered by**: @${{ github.actor }}
-          `;
+          ### 💰 예상 비용
+          - EKS 클러스터: ~$73/월
+          - EC2 노드 (t3.medium × 2): ~$60/월  
+          - RDS (db.t3.micro): ~$15/월
+          - NAT Gateway: ~$45/월
+          - **총 예상: ~$193/월**
+          
+          ---
+          
+          **✅ 승인 후 자동 배포됩니다.**`;
           
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: output
+            body: comment
           });
-          
-    - name: 💾 Upload Plan Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: terraform-plan
-        path: infra/dev/terraform/tfplan
-        retention-days: 5
 
   terraform-apply:
-    name: 🚀 Terraform Apply
+    name: Terraform Apply
     runs-on: ubuntu-latest
-    needs: [terraform-check, terraform-plan]
-    if: |
-      needs.terraform-check.outputs.tf-changes == 'true' && 
-      (github.ref == 'refs/heads/main' || 
-       github.ref == 'refs/heads/develop' || 
-       github.event.inputs.action == 'apply')
-    environment: 
-      name: ${{ github.event.inputs.environment || 'dev' }}
-      url: https://console.aws.amazon.com/
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
     
     steps:
-    - name: 📥 Checkout Code
+    - name: Checkout
       uses: actions/checkout@v4
-      
-    - name: 🔐 Configure AWS Credentials
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+
+    - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-        
-    - name: ⚙️ Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: ${{ env.TF_VERSION }}
-        
-    - name: 🚀 Terraform Init
+        aws-region: ap-northeast-2
+
+    - name: Terraform Init
       run: |
-        cd infra/dev/terraform
+        cd test/skyline-infrastructure
         terraform init
-        
-    - name: 📥 Download Plan Artifact
-      if: github.event.inputs.action != 'destroy'
-      uses: actions/download-artifact@v4
-      with:
-        name: terraform-plan
-        path: infra/dev/terraform/
-        
-    - name: 🚀 Terraform Apply
-      if: github.event.inputs.action != 'destroy'
-      run: |
-        cd infra/dev/terraform
-        terraform apply -auto-approve tfplan
-        
-    - name: 💥 Terraform Destroy
-      if: github.event.inputs.action == 'destroy'
-      run: |
-        cd infra/dev/terraform
-        terraform destroy -auto-approve
-        
-    - name: 📊 Generate Infrastructure Report
-      if: github.event.inputs.action != 'destroy'
-      run: |
-        cd infra/dev/terraform
-        echo "## 🏗️ Infrastructure Deployment Report" > deployment-report.md
-        echo "" >> deployment-report.md
-        echo "**Environment**: \`${{ github.event.inputs.environment || 'dev' }}\`" >> deployment-report.md
-        echo "**Deployed by**: @${{ github.actor }}" >> deployment-report.md
-        echo "**Timestamp**: $(date -u)" >> deployment-report.md
-        echo "" >> deployment-report.md
-        echo "### 📋 Applied Resources" >> deployment-report.md
-        terraform show -json | jq -r '.values.root_module.resources[] | "- \(.type): \(.name)"' >> deployment-report.md || echo "- Resource list generation failed" >> deployment-report.md
-        
-    - name: 💾 Upload Deployment Report
-      if: github.event.inputs.action != 'destroy'
-      uses: actions/upload-artifact@v4
-      with:
-        name: deployment-report
-        path: infra/dev/terraform/deployment-report.md
-        retention-days: 30
 
-  notify-success:
-    name: 🎉 Notify Success
-    runs-on: ubuntu-latest
-    needs: [terraform-apply]
-    if: success()
-    
-    steps:
-    - name: 🎉 Success Notification
+    - name: Terraform Apply
       run: |
-        echo "🚀 Infrastructure deployment completed successfully!"
-        echo "Environment: ${{ github.event.inputs.environment || 'dev' }}"
-        echo "Action: ${{ github.event.inputs.action || 'apply' }}"
-        echo "Triggered by: ${{ github.actor }}"
-        
-    - name: 📢 Slack Success Notification
-      if: env.SLACK_WEBHOOK_URL != ''
-      uses: 8398a7/action-slack@v3
-      with:
-        status: success
-        channel: '#infrastructure'
-        username: 'Terraform Bot'
-        icon_emoji: ':rocket:'
-        title: '🚀 Infrastructure Deployment Success'
-        text: |
-          *Environment:* ${{ github.event.inputs.environment || 'dev' }}
-          *Action:* ${{ github.event.inputs.action || 'apply' }}
-          *Triggered by:* ${{ github.actor }}
-          *Branch:* ${{ github.ref_name }}
-          *Commit:* ${{ github.sha }}
-          
-          ✅ All infrastructure changes have been applied successfully!
-          
-          ${{ github.event.inputs.change_summary && format('**📋 Changes Applied:**
-          {0}', github.event.inputs.change_summary) || '' }}
-        fields: |
-          [
-            {
-              "title": "Repository",
-              "value": "${{ github.repository }}",
-              "short": true
-            },
-            {
-              "title": "Workflow",
-              "value": "${{ github.workflow }}",
-              "short": true
-            }
-          ]
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        cd test/skyline-infrastructure
+        terraform apply -auto-approve
 
-  notify-failure:
-    name: ❌ Notify Failure
-    runs-on: ubuntu-latest
-    needs: [terraform-check, terraform-plan, terraform-apply]
-    if: failure()
-    
-    steps:
-    - name: ❌ Failure Notification
+    - name: Get Terraform Outputs
+      id: outputs
       run: |
-        echo "💥 Infrastructure deployment failed!"
-        
-    - name: 📢 Slack Failure Notification
-      if: env.SLACK_WEBHOOK_URL != ''
-      uses: 8398a7/action-slack@v3
-      with:
-        status: failure
-        channel: '#infrastructure'
-        username: 'Terraform Bot'
-        icon_emoji: ':warning:'
-        title: '❌ Infrastructure Deployment Failed'
-        text: |
-          *Environment:* ${{ github.event.inputs.environment || 'dev' }}
-          *Action:* ${{ github.event.inputs.action || 'apply' }}
-          *Triggered by:* ${{ github.actor }}
-          *Branch:* ${{ github.ref_name }}
-          *Commit:* ${{ github.sha }}
-          
-          💥 Infrastructure deployment encountered errors. Please check the logs.
-          
-          ${{ github.event.inputs.change_summary && format('**📋 Attempted Changes:**
-          {0}', github.event.inputs.change_summary) || '' }}
-        fields: |
-          [
-            {
-              "title": "Repository",
-              "value": "${{ github.repository }}",
-              "short": true
-            },
-            {
-              "title": "Workflow Run",
-              "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-              "short": true
-            }
-          ]
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        cd test/skyline-infrastructure
+        echo "vpc_id=$(terraform output -raw vpc_id)" >> $GITHUB_OUTPUT
+        echo "eks_cluster_name=$(terraform output -raw eks_cluster_name)" >> $GITHUB_OUTPUT
+        echo "rds_endpoint=$(terraform output -raw rds_endpoint)" >> $GITHUB_OUTPUT
+        echo "ecr_url=$(terraform output -raw ecr_repository_url)" >> $GITHUB_OUTPUT
+
+    - name: Update kubeconfig
+      run: |
+        aws eks update-kubeconfig --region ap-northeast-2 --name ${{ steps.outputs.outputs.eks_cluster_name }}
+
+    - name: Verify EKS cluster
+      run: |
+        kubectl get nodes
+        kubectl get namespaces
+
+    - name: Create deployment summary
+      run: |
+        echo "## 🚀 Infrastructure Deployment Complete!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 Deployed Resources" >> $GITHUB_STEP_SUMMARY
+        echo "- **VPC ID**: ${{ steps.outputs.outputs.vpc_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **EKS Cluster**: ${{ steps.outputs.outputs.eks_cluster_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **RDS Endpoint**: ${{ steps.outputs.outputs.rds_endpoint }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **ECR Repository**: ${{ steps.outputs.outputs.ecr_url }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🎯 Next Steps" >> $GITHUB_STEP_SUMMARY
+        echo "1. Deploy Kubernetes manifests" >> $GITHUB_STEP_SUMMARY
+        echo "2. Build and push Docker image to ECR" >> $GITHUB_STEP_SUMMARY
+        echo "3. Configure application secrets" >> $GITHUB_STEP_SUMMARY
+        echo "4. Run health checks" >> $GITHUB_STEP_SUMMARY

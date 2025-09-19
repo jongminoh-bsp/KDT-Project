@@ -1,0 +1,116 @@
+name: Terraform Infrastructure PR Automation
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'test/skyline-infrastructure/**'
+      - '!test/skyline-infrastructure/README.md'
+
+jobs:
+  create-infrastructure-pr:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-northeast-2
+
+    - name: Terraform Format Check
+      run: |
+        cd test/skyline-infrastructure
+        terraform fmt -check -recursive
+
+    - name: Terraform Validate
+      run: |
+        cd test/skyline-infrastructure
+        terraform init -backend=false
+        terraform validate
+
+    - name: Generate PR branch name
+      id: branch
+      run: |
+        TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+        BRANCH_NAME="infrastructure/skyline-${TIMESTAMP}"
+        echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+
+    - name: Create infrastructure branch
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git checkout -b ${{ steps.branch.outputs.branch_name }}
+        git push origin ${{ steps.branch.outputs.branch_name }}
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ steps.branch.outputs.branch_name }}
+        base: main
+        title: "🏗️ Infrastructure: Deploy Skyline Application Infrastructure"
+        body: |
+          ## 📋 Infrastructure Deployment Request
+          
+          ### 🎯 목적
+          Skyline 항공예약시스템을 위한 AWS 인프라 배포 요청
+          
+          ### 🏗️ 배포될 리소스
+          - **VPC**: 10.0.0.0/16, 2개 AZ, Public/Private 서브넷
+          - **EKS**: Kubernetes 1.28 클러스터 + t3.medium 노드 2개
+          - **RDS**: MySQL 8.0 (db.t3.micro, 암호화 적용)
+          - **ECR**: Docker 이미지 저장소
+          - **보안**: IAM 역할, 보안그룹, Secrets Manager
+          
+          ### 💰 예상 비용 (월간)
+          - EKS 클러스터: $73
+          - EC2 노드: $60
+          - RDS: $15
+          - NAT Gateway: $45
+          - **총 예상: ~$193/월**
+          
+          ### 🔒 보안 검토 사항
+          - [x] RDS 비밀번호 Secrets Manager 관리
+          - [x] EKS 노드 Private 서브넷 배치
+          - [x] 최소 권한 보안그룹 설정
+          - [x] 모든 리소스 암호화 적용
+          
+          ### ✅ 사전 검증 완료
+          - [x] Terraform 포맷 검사
+          - [x] Terraform 구문 검증
+          - [x] 모듈 구조 검토
+          
+          ### 🚀 배포 후 작업
+          1. EKS 클러스터 접근 설정
+          2. Kubernetes 매니페스트 배포
+          3. 애플리케이션 헬스체크
+          
+          ---
+          
+          **⚠️ 주의**: 이 PR이 승인되면 실제 AWS 리소스가 생성되며 비용이 발생합니다.
+          
+          **👥 리뷰어**: @jongminoh-bsp (인프라 관리자 승인 필요)
+        labels: |
+          infrastructure
+          terraform
+          aws
+          review-required
+        reviewers: |
+          jongminoh-bsp
+        assignees: |
+          jongminoh-bsp

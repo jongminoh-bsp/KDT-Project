@@ -1,0 +1,16 @@
+# Global owners
+* @jongminoh-bsp
+
+# Infrastructure code requires infrastructure team review
+test/skyline-infrastructure/ @jongminoh-bsp
+terraform/ @jongminoh-bsp
+*.tf @jongminoh-bsp
+*.tfvars @jongminoh-bsp
+
+# Kubernetes manifests require platform team review  
+k8s/ @jongminoh-bsp
+*.yaml @jongminoh-bsp
+*.yml @jongminoh-bsp
+
+# CI/CD workflows require DevOps team review
+.github/workflows/ @jongminoh-bsp
