@@ -1,0 +1,25 @@
+aws_region    = "ap-northeast-2"
+project_name  = "skyline"
+environment   = "dev"
+
+# VPC Configuration
+vpc_cidr = "10.0.0.0/16"
+
+# EKS Configuration
+eks_node_instance_types = ["t3.medium"]
+eks_node_desired_size   = 2
+eks_node_max_size       = 4
+eks_node_min_size       = 1
+
+# RDS Configuration
+rds_instance_class = "db.t3.micro"
+rds_db_name       = "skyline"
+rds_username      = "skyline_user"
+
+# Common Tags
+common_tags = {
+  Project     = "skyline"
+  Environment = "dev"
+  ManagedBy   = "terraform"
+  Owner       = "kdt-project"
+}
