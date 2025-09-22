@@ -1,0 +1,153 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: skyline-db-init
+  namespace: skyline
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: db-init
+        image: mysql:8.0
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "=== Skyline 데이터베이스 초기화 ==="
+          
+          # 데이터베이스 연결 테스트
+          echo "데이터베이스 연결 테스트 중..."
+          mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASSWORD -e "SELECT 1;" || exit 1
+          echo "데이터베이스 연결 성공!"
+          
+          # 스키마 생성
+          echo "스키마 생성 중..."
+          mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASSWORD $DB_NAME << 'EOF'
+          -- 기존 테이블 삭제 (있다면)
+          DROP TABLE IF EXISTS reservations;
+          DROP TABLE IF EXISTS flights;
+          DROP TABLE IF EXISTS airports;
+          
+          -- 공항 테이블 생성
+          CREATE TABLE airports (
+              airport_code VARCHAR(3) PRIMARY KEY,
+              airport_name VARCHAR(100) NOT NULL,
+              city VARCHAR(50) NOT NULL,
+              country VARCHAR(50) NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+          );
+          
+          -- 항공편 테이블 생성
+          CREATE TABLE flights (
+              flight_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+              flight_number VARCHAR(10) NOT NULL,
+              departure_airport VARCHAR(3) NOT NULL,
+              arrival_airport VARCHAR(3) NOT NULL,
+              departure_time DATETIME NOT NULL,
+              arrival_time DATETIME NOT NULL,
+              price DECIMAL(10,2) NOT NULL,
+              available_seats INT NOT NULL DEFAULT 0,
+              total_seats INT NOT NULL DEFAULT 180,
+              aircraft_type VARCHAR(50),
+              status VARCHAR(20) DEFAULT 'SCHEDULED',
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              FOREIGN KEY (departure_airport) REFERENCES airports(airport_code),
+              FOREIGN KEY (arrival_airport) REFERENCES airports(airport_code)
+          );
+          
+          -- 예약 테이블 생성
+          CREATE TABLE reservations (
+              reservation_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+              flight_id BIGINT NOT NULL,
+              passenger_name VARCHAR(100) NOT NULL,
+              passenger_email VARCHAR(100) NOT NULL,
+              passenger_phone VARCHAR(20),
+              seat_number VARCHAR(10),
+              reservation_status VARCHAR(20) DEFAULT 'CONFIRMED',
+              booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              total_price DECIMAL(10,2) NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              FOREIGN KEY (flight_id) REFERENCES flights(flight_id)
+          );
+          EOF
+          
+          echo "스키마 생성 완료!"
+          
+          # 시드 데이터 삽입
+          echo "시드 데이터 삽입 중..."
+          mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASSWORD $DB_NAME << 'EOF'
+          -- 공항 데이터
+          INSERT INTO airports (airport_code, airport_name, city, country) VALUES
+          ('ICN', '인천국제공항', '인천', '대한민국'),
+          ('GMP', '김포국제공항', '서울', '대한민국'),
+          ('PUS', '김해국제공항', '부산', '대한민국'),
+          ('NRT', '나리타국제공항', '도쿄', '일본'),
+          ('HND', '하네다공항', '도쿄', '일본'),
+          ('LAX', '로스앤젤레스국제공항', '로스앤젤레스', '미국'),
+          ('JFK', '존 F. 케네디 국제공항', '뉴욕', '미국'),
+          ('LHR', '히드로공항', '런던', '영국'),
+          ('CDG', '샤를 드 골 공항', '파리', '프랑스'),
+          ('SIN', '창이공항', '싱가포르', '싱가포르');
+          
+          -- 항공편 데이터
+          INSERT INTO flights (flight_number, departure_airport, arrival_airport, departure_time, arrival_time, price, available_seats, total_seats, aircraft_type, status) VALUES
+          ('KE001', 'ICN', 'NRT', '2025-09-23 09:00:00', '2025-09-23 11:30:00', 250000, 150, 180, 'Boeing 737', 'SCHEDULED'),
+          ('KE002', 'NRT', 'ICN', '2025-09-23 13:00:00', '2025-09-23 15:30:00', 250000, 160, 180, 'Boeing 737', 'SCHEDULED'),
+          ('KE101', 'ICN', 'LAX', '2025-09-24 14:00:00', '2025-09-24 08:30:00', 850000, 200, 250, 'Boeing 777', 'SCHEDULED'),
+          ('KE102', 'LAX', 'ICN', '2025-09-25 11:00:00', '2025-09-26 16:30:00', 850000, 220, 250, 'Boeing 777', 'SCHEDULED'),
+          ('KE201', 'ICN', 'LHR', '2025-09-25 22:00:00', '2025-09-26 05:30:00', 1200000, 180, 220, 'Airbus A350', 'SCHEDULED'),
+          ('KE301', 'ICN', 'SIN', '2025-09-26 08:00:00', '2025-09-26 14:00:00', 450000, 170, 200, 'Boeing 787', 'SCHEDULED'),
+          ('KE401', 'PUS', 'NRT', '2025-09-27 10:00:00', '2025-09-27 12:00:00', 180000, 140, 160, 'Airbus A320', 'SCHEDULED'),
+          ('KE501', 'GMP', 'HND', '2025-09-28 07:30:00', '2025-09-28 09:45:00', 220000, 130, 150, 'Boeing 737', 'SCHEDULED');
+          
+          -- 샘플 예약 데이터
+          INSERT INTO reservations (flight_id, passenger_name, passenger_email, passenger_phone, seat_number, total_price) VALUES
+          (1, '김철수', 'kim@example.com', '010-1234-5678', '12A', 250000),
+          (1, '이영희', 'lee@example.com', '010-2345-6789', '12B', 250000),
+          (3, '박민수', 'park@example.com', '010-3456-7890', '15C', 850000),
+          (5, '최지영', 'choi@example.com', '010-4567-8901', '8A', 1200000);
+          EOF
+          
+          echo "시드 데이터 삽입 완료!"
+          
+          # 데이터 확인
+          echo "데이터 확인 중..."
+          AIRPORT_COUNT=$(mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASSWORD $DB_NAME -se "SELECT COUNT(*) FROM airports;")
+          FLIGHT_COUNT=$(mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASSWORD $DB_NAME -se "SELECT COUNT(*) FROM flights;")
+          RESERVATION_COUNT=$(mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASSWORD $DB_NAME -se "SELECT COUNT(*) FROM reservations;")
+          
+          echo "=== 초기화 완료! ==="
+          echo "공항 수: $AIRPORT_COUNT"
+          echo "항공편 수: $FLIGHT_COUNT"
+          echo "예약 수: $RESERVATION_COUNT"
+        env:
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: skyline-db-secret
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: skyline-db-secret
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: skyline-db-secret
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: skyline-db-secret
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: skyline-db-secret
+              key: DB_PASSWORD
+  backoffLimit: 3
