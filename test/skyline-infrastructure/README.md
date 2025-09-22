@@ -2,6 +2,8 @@
 
 Skyline 항공예약시스템을 위한 AWS 인프라 Terraform 코드입니다.
 
+> 🚀 GitHub Actions 자동화 워크플로 테스트 중
+
 ## 📋 인프라 구성
 
 ### 주요 리소스
