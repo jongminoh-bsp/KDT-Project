@@ -32,8 +32,8 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = merge(var.tags, {
-    Name = "${var.project_name}-${var.environment}-public-${count.index + 1}"
-    Type = "public"
+    Name                     = "${var.project_name}-${var.environment}-public-${count.index + 1}"
+    Type                     = "public"
     "kubernetes.io/role/elb" = "1"
   })
 }
@@ -47,15 +47,15 @@ resource "aws_subnet" "private" {
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = merge(var.tags, {
-    Name = "${var.project_name}-${var.environment}-private-${count.index + 1}"
-    Type = "private"
+    Name                              = "${var.project_name}-${var.environment}-private-${count.index + 1}"
+    Type                              = "private"
     "kubernetes.io/role/internal-elb" = "1"
   })
 }
 
 # NAT Gateway
 resource "aws_eip" "nat" {
-  count = 2
+  count  = 2
   domain = "vpc"
 
   tags = merge(var.tags, {
