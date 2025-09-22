@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: skyline-base
+
+resources:
+- namespace.yaml
+- configmap.yaml
+- secret.yaml
+- deployment.yaml
+- service.yaml
+- ingress.yaml
+- hpa.yaml
+
+commonLabels:
+  app.kubernetes.io/name: skyline
+  app.kubernetes.io/instance: skyline-dev
+  app.kubernetes.io/version: v1.0.0
+  app.kubernetes.io/component: backend
+  app.kubernetes.io/part-of: skyline-system
+  app.kubernetes.io/managed-by: kustomize
+
+images:
+- name: 646558765106.dkr.ecr.ap-northeast-2.amazonaws.com/skyline-dev
+  newTag: latest

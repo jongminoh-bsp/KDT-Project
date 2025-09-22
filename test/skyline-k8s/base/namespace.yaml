@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: skyline
+  labels:
+    name: skyline
+    environment: dev
+    project: kdt-project
