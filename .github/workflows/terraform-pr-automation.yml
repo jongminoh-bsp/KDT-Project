@@ -8,6 +8,11 @@ on:
       - 'test/skyline-infrastructure/**'
       - '!test/skyline-infrastructure/README.md'
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
 jobs:
   create-infrastructure-pr:
     runs-on: ubuntu-latest
@@ -50,20 +55,15 @@ jobs:
         BRANCH_NAME="infrastructure/skyline-${TIMESTAMP}"
         echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
 
-    - name: Create infrastructure branch
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git checkout -b ${{ steps.branch.outputs.branch_name }}
-        git push origin ${{ steps.branch.outputs.branch_name }}
-
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v5
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "feat: Deploy Skyline infrastructure via automation"
+        title: "🏗️ Infrastructure: Deploy Skyline Application Infrastructure"
         branch: ${{ steps.branch.outputs.branch_name }}
         base: main
-        title: "🏗️ Infrastructure: Deploy Skyline Application Infrastructure"
+        delete-branch: true
         body: |
           ## 📋 Infrastructure Deployment Request
           
