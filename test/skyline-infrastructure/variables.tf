@@ -1,3 +1,6 @@
+# Skyline Infrastructure Variables
+# GitHub Actions 자동화 테스트
+
 variable "aws_region" {
   description = "AWS region for deployment"
   type        = string
